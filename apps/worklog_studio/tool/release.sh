@@ -2,146 +2,77 @@
 
 set -e
 
-PROJECT_DIR="$(pwd)"
-APP_NAME="worklog_studio"
-DMG_NAME="dmg/worklogStudio.dmg"
-APPCAST_PATH="release/appcast.xml"
-
-echo "🚀 Starting release..."
+echo "🚀 Manual GitHub release..."
 
 # -----------------------------
-# 1. Обновление версии
+# 1. Get version
 # -----------------------------
 
 VERSION_LINE=$(grep '^version:' pubspec.yaml)
 CURRENT_VERSION=$(echo $VERSION_LINE | sed 's/version: //')
 
 NAME=$(echo $CURRENT_VERSION | cut -d+ -f1)
-BUILD=$(echo $CURRENT_VERSION | cut -d+ -f2)
+TAG="v$NAME"
 
- # Split semantic version
-MAJOR=$(echo $NAME | cut -d. -f1)
-MINOR=$(echo $NAME | cut -d. -f2)
-PATCH=$(echo $NAME | cut -d. -f3)
-
-TYPE=$1
-
-# If first argument is a manual version like 1.2.3
-if [[ "$TYPE" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  NEW_NAME="$TYPE"
-else
-  if [ "$TYPE" = "major" ]; then
-    MAJOR=$((MAJOR + 1))
-    MINOR=0
-    PATCH=0
-  elif [ "$TYPE" = "minor" ]; then
-    MINOR=$((MINOR + 1))
-    PATCH=0
-  else
-    # default = patch
-    PATCH=$((PATCH + 1))
-  fi
-
-  NEW_NAME="$MAJOR.$MINOR.$PATCH"
-fi
-
-# Increment build
-NEW_BUILD=$((BUILD + 1))
-
-NEW_VERSION="$NEW_NAME+$NEW_BUILD"
-
-echo "📦 Version: $NEW_VERSION"
-
-sed -i '' "s/version: .*/version: $NEW_VERSION/" pubspec.yaml
+DMG_PATH="dmg/worklogStudio.dmg"
 
 # -----------------------------
-# 2. Build
+# 2. Check tag exists (early)
 # -----------------------------
 
-flutter build macos
-
-# -----------------------------
-# 3. Prepare dmg folder
-# -----------------------------
-
-rm -rf dmg
-mkdir dmg
-mkdir dmg/tmp
-
-cp -R build/macos/Build/Products/Release/$APP_NAME.app dmg/tmp/
-ln -s /Applications dmg/tmp/Applications
-
-# -----------------------------
-# 4. Create dmg
-# -----------------------------
-
-hdiutil create -volname "Worklog Studio" \
-  -srcfolder dmg/tmp \
-  -ov -format UDZO $DMG_NAME
-
-rm -rf dmg/tmp
-
-# -----------------------------
-# 5. Sign dmg
-# -----------------------------
-
-SIGN_TOOL=$(find ~/Library/Developer/Xcode/DerivedData -name sign_update | head -n 1)
-
-if [ -z "$SIGN_TOOL" ]; then
-  echo "❌ sign_update not found"
+if ! git rev-parse "$TAG" >/dev/null 2>&1; then
+  echo "❌ Tag does not exist: $TAG"
+  echo "👉 Run publish.sh first"
   exit 1
 fi
 
-SIGN_OUTPUT=$($SIGN_TOOL $DMG_NAME)
-
-# Extract only the edSignature value (avoid picking up file size or other numbers)
-SIGNATURE=$(echo "$SIGN_OUTPUT" | grep "sparkle:edSignature" | awk -F '"' '{print $2}')
-
-echo "🔐 Signature: $SIGNATURE"
+if [ ! -f "$DMG_PATH" ]; then
+  echo "❌ DMG not found: $DMG_PATH"
+  exit 1
+fi
 
 # -----------------------------
-# 6. File size
+# 3. Detect prerelease
 # -----------------------------
 
-FILE_SIZE=$(stat -f%z $DMG_NAME)
+if [[ "$TAG" == *"dev"* ]]; then
+  PRERELEASE_FLAG="--prerelease"
+  echo "⚠️ Creating PRE-release"
+else
+  PRERELEASE_FLAG=""
+  echo "✅ Creating RELEASE"
+fi
 
-echo "📏 Size: $FILE_SIZE"
 
 # -----------------------------
-# 7. Update appcast
+# 4 Generate changelog
 # -----------------------------
 
-SHORT_VERSION=$(echo $NEW_NAME)
-BUILD_VERSION=$NEW_BUILD
+PREV_TAG=$(git describe --tags --abbrev=0 "$TAG"^ 2>/dev/null || echo "")
 
-cat > $APPCAST_PATH <<EOL
-<?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0"
-    xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
-<channel>
-  <title>Worklog Studio Updates</title>
-  <link>https://example.com/updates</link>
-  <description>Latest updates for Worklog Studio</description>
-  <language>en</language>
+if [ -z "$PREV_TAG" ]; then
+  echo "ℹ️ No previous tag found"
+  CHANGELOG=$(git log --pretty=format:"- %s")
+else
+  echo "📜 Changelog from $PREV_TAG to $TAG"
+  CHANGELOG=$(git log "$PREV_TAG"..HEAD --pretty=format:"- %s")
+fi
 
-  <item>
-    <title>Version $SHORT_VERSION</title>
-    <sparkle:releaseNotesLink>https://example.com/updates/release-notes-1.0.1.html</sparkle:releaseNotesLink>
-    <pubDate>Mon, 01 Jan 2024 12:00:00 +0000</pubDate>
+# write to temp file
+CHANGELOG_FILE=$(mktemp)
+echo "$CHANGELOG" > $CHANGELOG_FILE
 
-    <enclosure
-      url="http://localhost:3000/$DMG_NAME"
-      sparkle:version="$BUILD_VERSION"
-      sparkle:shortVersionString="$SHORT_VERSION"
-      sparkle:edSignature="$SIGNATURE"
-      length="$FILE_SIZE"
-      type="application/octet-stream"/>
-  </item>
+# -----------------------------
+# 5. Create GitHub release
+# -----------------------------
 
-</channel>
-</rss>
-EOL
+TITLE="Release $NAME"
 
-echo "✅ appcast updated"
+gh release create "$TAG" "$DMG_PATH" \
+  --title "$TITLE" \
+  --notes-file "$CHANGELOG_FILE" \
+  $PRERELEASE_FLAG
 
-echo "🎉 Release ready!"
+rm "$CHANGELOG_FILE"
+
+echo "🎉 GitHub release created: $TAG"

@@ -1,112 +1,48 @@
-Release Guide (macOS + Sparkle)
+# Release Guide (macOS + Sparkle)
 
-## 📌 Требования
-- Установлен Flutter
-- Настроен Sparkle
-- Sandbox выключен в entitlements
+## 📌 Requirements
+- Flutter installed
+- Sparkle configured
+- Sandbox disabled (entitlements)
 
 ---
 
-## 🚀 Быстрый релиз
+## 📚 Table of Contents
+
+- [Workflow](#-workflow)
+- [Versioning](#-versioning)
+- [Version flow](#-version-flow)
+- [build.sh](#-buildsh)
+- [publish.sh](#-publishsh)
+- [release.sh](#-releasesh-manual-github-release)
+- [Paths](#-paths)
+- [Local testing](#-local-testing)
+- [First release (manual, no CI)](#-first-release-manual-no-ci)
+- [Important](#important)
+
+---
+
+## 🚀 Workflow
 
 ```bash
 cd apps/worklog_studio
-./tool/release.sh
 ```
 
-Можно указать тип версии:
-- ./tool/release.sh patch (по умолчанию)
-- ./tool/release.sh minor
-- ./tool/release.sh major
-- ./tool/release.sh 1.2.0 (ручная версия)
-
-Что делает скрипт:
-- повышает версию в `pubspec.yaml`
-- билдит macOS
-- собирает DMG
-- подписывает
-- обновляет `release/appcast.xml`
-
----
-
-## 🧠 Версионирование
-
-Формат:
-
-```
-MAJOR.MINOR.PATCH+BUILD
-```
-
-Пример:
-
-```
-1.2.3+10
-```
-
----
-
-## 🔼 Как повышать версию
-
-### PATCH (багфиксы)
-```
-1.0.1 → 1.0.2
-```
-
-### MINOR (новый функционал)
-```
-1.1.0 → 1.2.0
-```
-
-### MAJOR (breaking changes)
-```
-1.0.0 → 2.0.0
-```
-
----
-
-## ⚙️ Поведение скрипта
-
-По умолчанию:
-- увеличивает PATCH
-- увеличивает BUILD
-
-```
-1.0.1+2 → 1.0.2+3
-```
-
-Тип версии можно передать аргументом:
+### Development build (pre-release)
 
 ```bash
-./tool/release.sh patch
-./tool/release.sh minor
-./tool/release.sh major
+./tool/build.sh dev
+./tool/publish.sh
 ```
 
-Ручная установка версии:
+### Release build
 
 ```bash
-./tool/release.sh 2.0.0
+./tool/build.sh release
+./tool/publish.sh
 ```
 
-В этом случае build number всё равно увеличится автоматически.
-
----
-
-## ✏️ Ручное изменение версии
-
-Открой:
-
-```
-pubspec.yaml
-```
-
-И задай нужную:
-
-```
-version: 1.2.0+15
-```
-
-После этого:
+### Manual GitHub release (optional)
 
 ```bash
 ./tool/release.sh
@@ -114,14 +50,103 @@ version: 1.2.0+15
 
 ---
 
-## 📦 Пути
+## 🧠 Versioning
+
+Format:
+
+```
+MAJOR.MINOR.PATCH[-dev.N]+BUILD
+```
+
+Examples:
+
+```
+1.0.1
+1.0.2-dev.1
+1.0.2-dev.5
+1.0.2
+```
+
+---
+
+## 🔄 Version flow
+
+```
+1.0.1
+↓
+1.0.2-dev.1
+1.0.2-dev.2
+...
+1.0.2-dev.N
+↓
+1.0.2
+↓
+1.0.3-dev.1
+```
+
+---
+
+## 🏠 build.sh
+
+```bash
+./tool/build.sh dev        # next dev version
+./tool/build.sh release    # finalize version
+./tool/build.sh 2.0.0      # manual version
+```
+
+Behavior:
+
+- `dev`:
+  - `1.0.1 → 1.0.2-dev.1`
+  - `1.0.2-dev.3 → 1.0.2-dev.4`
+
+- `release`:
+  - `1.0.2-dev.5 → 1.0.2`
+
+- always increments `BUILD`
+
+---
+
+## 🚀 publish.sh
+
+```bash
+./tool/publish.sh
+```
+
+Does:
+- commit `pubspec.yaml`
+- create tag (`v1.0.2-dev.3` or `v1.0.2`)
+- atomic push (commit + tag)
+
+CI should handle build & GitHub release.
+
+---
+
+## 📤 release.sh (manual GitHub release)
+
+```bash
+./tool/release.sh
+```
+
+Does:
+- creates GitHub release for current tag
+- uploads `dmg/worklogStudio.dmg`
+- marks prerelease automatically if version contains `dev`
+
+Use when:
+- CI is not configured
+- or you need to publish release manually
+
+---
+
+## 📦 Paths
 
 ```
 build/macos/Build/Products/Release/worklog_studio.app
 ```
 
 ```
-dmg/WorklogStudio.dmg
+dmg/worklogStudio.dmg
 ```
 
 ```
@@ -130,13 +155,11 @@ release/appcast.xml
 
 ---
 
-## 🌐 Локальное тестирование
+## 🌐 Local testing
 
 ```bash
 npx serve .
 ```
-
-URL:
 
 ```
 http://localhost:3000/release/appcast.xml
@@ -144,15 +167,15 @@ http://localhost:3000/release/appcast.xml
 
 ---
 
-## ⚠️ Важно
+## ⚠️ Notes
 
-- ❌ не использовать `file://`
-- ❗ запускать приложение из `/Applications`
-- ❗ всегда увеличивать BUILD
+- ❌ do not use `file://`
+- ❗ run app from `/Applications`
+- ❗ BUILD must always increase
 
 ---
 
-## 🧪 Проверка обновления
+## 🧪 Update check
 
 ```dart
 SparkleBridge.checkForUpdates();
@@ -160,10 +183,72 @@ SparkleBridge.checkForUpdates();
 
 ---
 
-## ✅ Чеклист
+## ✅ Checklist
 
-- [ ] Обновил версию
-- [ ] Запустил `./tool/release.sh` (с нужным типом версии)
-- [ ] Запустил сервер
-- [ ] Установил в `/Applications`
-- [ ] Проверил обновление
+- [ ] Run `build.sh` (dev or release)
+- [ ] Run `publish.sh` (triggers CI)
+- [ ] (optional) Run `release.sh` if publishing manually
+- [ ] Start server
+- [ ] Install app to `/Applications`
+- [ ] Verify update
+
+---
+
+## 🚀 First release (manual, no CI)
+
+Step-by-step:
+
+```bash
+cd apps/worklog_studio
+```
+
+### 1. Build release
+
+```bash
+./tool/build.sh release
+```
+
+This will:
+- bump version
+- build macOS app
+- create `dmg/worklogStudio.dmg`
+- generate `release/appcast.xml`
+
+### 2. Publish tag
+
+```bash
+./tool/publish.sh
+```
+
+This will:
+- commit version
+- create tag (e.g. `v1.0.1`)
+- push to GitHub
+
+### 3. Create GitHub release
+
+```bash
+./tool/release.sh
+```
+
+This will:
+- create release on GitHub
+- upload `.dmg`
+- attach changelog
+
+### 4. Verify URLs
+
+Make sure:
+- DMG is available at:
+  ```
+  https://github.com/<user>/<repo>/releases/download/vX.X.X/worklogStudio.dmg
+  ```
+- appcast points to this URL
+
+---
+
+## Important
+- appcast must use **HTTPS** (no localhost in production)
+- `sparkle:version` must increase every release
+- `sparkle:shortVersionString` must match app version
+- release notes link should point to GitHub release

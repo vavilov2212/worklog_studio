@@ -29,7 +29,7 @@
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
   <key>SUFeedURL</key>
-  <string>http://localhost:3000/release/appcast.xml</string>
+  <string>https://raw.githubusercontent.com/vavilov2212/worklog_studio/main/apps/worklog_studio/release/appcast.xml</string>
   <key>SUPublicEDKey</key>
   <string>wqhEno77dklIquR1seD8bkLOsf9Pk1c6Z/xlwLtt38k=</string>
 </dict>

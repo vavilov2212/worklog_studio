@@ -25,7 +25,7 @@ flutter run -d macos
 
 ## 📦 Releases
 
-Build, packaging, and update process - [Release guide](apps/worklog_studio/tool/README.md)
+Build, packaging, and update process - [Release guide](./tool/README.md)
 
 ## 📌 Status
 
