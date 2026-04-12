@@ -1,0 +1,414 @@
+import 'package:flutter/material.dart' hide DrawerHeader;
+import 'package:provider/provider.dart';
+import 'package:worklog_studio/domain/task.dart';
+import 'package:worklog_studio/feature/common/presentation/components/drawer_content.dart';
+import 'package:worklog_studio/feature/common/presentation/components/drawer_header.dart';
+import 'package:worklog_studio/feature/common/presentation/resizable_drawer.dart';
+import 'package:worklog_studio/state/project_task_state.dart';
+import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
+
+class TaskDrawer extends StatefulWidget {
+  final Task? task;
+  final bool isOpen;
+  final VoidCallback onClose;
+
+  const TaskDrawer({
+    super.key,
+    required this.task,
+    required this.isOpen,
+    required this.onClose,
+  });
+
+  @override
+  State<TaskDrawer> createState() => _TaskDrawerState();
+}
+
+class _TaskDrawerState extends State<TaskDrawer> {
+  bool _isConfirmingDelete = false;
+  late TextEditingController _titleController;
+  late TextEditingController _descriptionController;
+  String? _selectedProjectId;
+
+  @override
+  void initState() {
+    super.initState();
+    _initControllers();
+  }
+
+  void _initControllers() {
+    _titleController = TextEditingController(text: widget.task?.title ?? '');
+    _descriptionController = TextEditingController(
+      text: widget.task?.description ?? '',
+    );
+    _selectedProjectId = widget.task?.projectId;
+  }
+
+  @override
+  void didUpdateWidget(TaskDrawer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.isOpen && oldWidget.isOpen) {
+      _isConfirmingDelete = false;
+    }
+    if (widget.task != oldWidget.task) {
+      _initControllers();
+    }
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  bool get _isNew => widget.task?.id == 'new';
+
+  void _handleSave() async {
+    final state = context.read<ProjectTaskState>();
+    if (_isNew) {
+      if (_selectedProjectId != null && _titleController.text.isNotEmpty) {
+        await state.createTask(
+          _selectedProjectId!,
+          _titleController.text,
+          _descriptionController.text,
+        );
+        widget.onClose();
+      }
+    } else {
+      if (widget.task != null && _titleController.text.isNotEmpty) {
+        final updatedTask = widget.task!.copyWith(
+          title: _titleController.text,
+          description: _descriptionController.text,
+          projectId: _selectedProjectId,
+        );
+        await state.updateTask(updatedTask);
+        widget.onClose();
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    final palette = theme.colorsPalette;
+
+    return ResizableDrawer(
+      isOpen: widget.isOpen,
+      onClose: widget.onClose,
+      header: DrawerHeader(
+        onClose: widget.onClose,
+        onDelete: _isNew
+            ? null
+            : () {
+                setState(() {
+                  _isConfirmingDelete = true;
+                });
+              },
+      ),
+      body: widget.task == null
+          ? const SizedBox.shrink()
+          : Column(
+              children: [
+                if (!_isNew)
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    transitionBuilder:
+                        (Widget child, Animation<double> animation) {
+                          return SizeTransition(
+                            sizeFactor: animation,
+                            child: FadeTransition(
+                              opacity: animation,
+                              child: child,
+                            ),
+                          );
+                        },
+                    child: _isConfirmingDelete
+                        ? Padding(
+                            key: const ValueKey('delete_confirmation'),
+                            padding: EdgeInsets.fromLTRB(
+                              theme.spacings.s32,
+                              theme.spacings.s16,
+                              theme.spacings.s32,
+                              0,
+                            ),
+                            child: InfoBar(
+                              variant: InfoBarVariant.danger,
+                              title: const Text('Delete this task?'),
+                              description: const Text(
+                                'This action cannot be undone',
+                              ),
+                              actions: Wrap(
+                                spacing: theme.spacings.s8,
+                                runSpacing: theme.spacings.s8,
+                                alignment: WrapAlignment.end,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  PrimaryButton(
+                                    onTap: () {
+                                      if (widget.task != null) {
+                                        context
+                                            .read<ProjectTaskState>()
+                                            .deleteTask(widget.task!.id);
+                                        widget.onClose();
+                                      }
+                                    },
+                                    title: 'Delete',
+                                    type: ButtonType.danger,
+                                    size: ButtonSize.sm,
+                                  ),
+                                  PrimaryButton(
+                                    onTap: () {
+                                      setState(() {
+                                        _isConfirmingDelete = false;
+                                      });
+                                    },
+                                    title: 'Cancel',
+                                    type: ButtonType.ghost,
+                                    size: ButtonSize.sm,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        : const SizedBox.shrink(
+                            key: ValueKey('no_confirmation'),
+                          ),
+                  ),
+                Expanded(
+                  child: DrawerContent(
+                    meta: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (!_isNew) ...[
+                          // Status Badge
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: theme.spacings.s12,
+                              vertical: theme.spacings.s4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: palette.accent.primaryMuted,
+                              borderRadius: theme.radiuses.pill.circular,
+                            ),
+                            child: Text(
+                              _getStatusText(widget.task!.status),
+                              style: theme.commonTextStyles.caption3Bold
+                                  .copyWith(color: palette.accent.primary),
+                            ),
+                          ),
+                          SizedBox(height: theme.spacings.s16),
+                        ],
+
+                        // Title Input
+                        PrimaryInput(
+                          label: 'TASK TITLE',
+                          hintText: 'Enter task title...',
+                          controller: _titleController,
+                        ),
+                      ],
+                    ),
+                    content: SingleChildScrollView(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: theme.spacings.s32,
+                        vertical: 0,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Description
+                          TextArea(
+                            label: 'DESCRIPTION',
+                            hintText: 'Add a description...',
+                            controller: _descriptionController,
+                            maxLines: 4,
+                          ),
+                          SizedBox(height: theme.spacings.s32),
+
+                          // Details Grid
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _DetailItem(
+                                  label: 'PROJECT',
+                                  child: Consumer<ProjectTaskState>(
+                                    builder: (context, state, child) {
+                                      return Select<String>(
+                                        value: _selectedProjectId,
+                                        placeholder: 'Select Project',
+                                        onChanged: (value) {
+                                          setState(() {
+                                            _selectedProjectId = value;
+                                          });
+                                        },
+                                        options: state.projects.map((p) {
+                                          return SelectOption(
+                                            value: p.id,
+                                            label: p.name,
+                                          );
+                                        }).toList(),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: theme.spacings.s16),
+                              Expanded(
+                                child: _DetailItem(
+                                  label: 'PRIORITY',
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.warning_amber_rounded,
+                                        size: 16,
+                                        color: palette.text.secondary,
+                                      ),
+                                      SizedBox(width: theme.spacings.s8),
+                                      Text(
+                                        'Medium',
+                                        style: theme.commonTextStyles.body
+                                            .copyWith(
+                                              color: palette.text.primary,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: theme.spacings.s24),
+                          if (!_isNew) ...[
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _DetailItem(
+                                    label: 'ASSIGNEE',
+                                    child: Row(
+                                      children: [
+                                        CircleAvatar(
+                                          radius: 12,
+                                          backgroundColor:
+                                              palette.border.primary,
+                                          child: Icon(
+                                            Icons.person,
+                                            size: 16,
+                                            color: palette.text.secondary,
+                                          ),
+                                        ),
+                                        SizedBox(width: theme.spacings.s8),
+                                        Text(
+                                          'Unassigned',
+                                          style:
+                                              theme.commonTextStyles.bodyBold,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: _DetailItem(
+                                    label: 'DUE DATE',
+                                    child: Text(
+                                      _formatDate(widget.task!.createdAt),
+                                      style: theme.commonTextStyles.body,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: theme.spacings.s40),
+                            Divider(color: palette.border.primary),
+                            SizedBox(height: theme.spacings.s32),
+
+                            // Activity Log
+                            Text(
+                              'ACTIVITY LOG',
+                              style: theme.commonTextStyles.caption3Bold
+                                  .copyWith(letterSpacing: 1.0),
+                            ),
+                            SizedBox(height: theme.spacings.s24),
+
+                            Text(
+                              'No activity yet.',
+                              style: theme.commonTextStyles.body.copyWith(
+                                color: palette.text.muted,
+                              ),
+                            ),
+                          ],
+                          SizedBox(
+                            height: theme.spacings.s24,
+                          ), // Bottom padding for scroll
+                        ],
+                      ),
+                    ),
+                    footer: SizedBox(
+                      width: double.infinity,
+                      child: PrimaryButton(
+                        title: _isNew ? 'Create Task' : 'Save Changes',
+                        onTap: _handleSave,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  String _getStatusText(TaskStatus status) {
+    switch (status) {
+      case TaskStatus.open:
+        return 'OPEN';
+      case TaskStatus.done:
+        return 'DONE';
+      case TaskStatus.archived:
+        return 'ARCHIVED';
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${months[date.month - 1]} ${date.day}, ${date.year}';
+  }
+}
+
+class _DetailItem extends StatelessWidget {
+  final String label;
+  final Widget child;
+
+  const _DetailItem({required this.label, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    final palette = theme.colorsPalette;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: theme.commonTextStyles.caption3Bold.copyWith(
+            color: palette.text.muted,
+            letterSpacing: 1.0,
+          ),
+        ),
+        SizedBox(height: theme.spacings.s8),
+        child,
+      ],
+    );
+  }
+}

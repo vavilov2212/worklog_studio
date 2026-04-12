@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0"
+    xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle"
+    xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>Worklog Studio Updates</title>
+    <link>https://example.com/updates</link>
+    <description>Latest updates for Worklog Studio</description>
+    <language>en</language>
+    <item>
+      <title>Version 1.0.1</title>
+      <sparkle:releaseNotesLink>https://example.com/updates/release-notes-1.0.1.html</sparkle:releaseNotesLink>
+      <pubDate>Mon, 01 Jan 2024 12:00:00 +0000</pubDate>
+      <enclosure
+        url="http://localhost:3000/WorklogStudio.dmg"
+        sparkle:version="2"
+        sparkle:shortVersionString="1.0.1"
+        sparkle:edSignature="E0zpWg40bff07+s+snHGsX6pL+RMgj53QrtbyQYScHeiE1mMta+PEBh5kQLFdEEYYcGACZS/dHZsE15w86A+Cw=="
+        length="26235766"
+        type="application/octet-stream"/>
+    </item>
+  </channel>
+</rss>

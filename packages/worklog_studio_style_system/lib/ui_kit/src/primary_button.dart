@@ -1,0 +1,306 @@
+import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
+import 'package:flutter/material.dart';
+import 'package:vector_svg/vector_svg.dart';
+
+class PrimaryButton extends StatefulWidget {
+  final String? title;
+  final String? leftIcon;
+  final String? rightIcon;
+  final ButtonType type;
+  final ButtonSize size;
+  final bool isLoading;
+  final bool isDisabled;
+  final VoidCallback? onTap;
+  final AlignmentGeometry? alignment;
+  final Color? backgroundColor;
+  final Color? foregroundColor;
+
+  const PrimaryButton({
+    required this.onTap,
+    this.title,
+    this.leftIcon,
+    this.rightIcon,
+    this.type = ButtonType.primary,
+    this.size = ButtonSize.md,
+    this.isLoading = false,
+    this.isDisabled = false,
+    this.alignment,
+    this.backgroundColor,
+    this.foregroundColor,
+    super.key,
+  });
+
+  @override
+  State<PrimaryButton> createState() => _PrimaryButtonState();
+}
+
+class _PrimaryButtonState extends State<PrimaryButton> {
+  bool isActive = false;
+  bool get isDisabled => widget.isDisabled || widget.onTap == null;
+
+  EdgeInsetsGeometry get innerPadding {
+    return switch (widget.size) {
+      ButtonSize.sm => EdgeInsets.symmetric(
+        vertical: context.theme.spacings.s8,
+        horizontal: context.theme.spacings.s12,
+      ),
+      ButtonSize.md => EdgeInsets.symmetric(
+        vertical: context.theme.spacings.s8,
+        horizontal: context.theme.spacings.s16,
+      ),
+      ButtonSize.lg => EdgeInsets.symmetric(
+        vertical: context.theme.spacings.s8,
+        horizontal: context.theme.spacings.s32,
+      ),
+    };
+  }
+
+  double get height {
+    return switch (widget.size) {
+      ButtonSize.sm => 36,
+      ButtonSize.md => 40,
+      ButtonSize.lg => 44,
+    };
+  }
+
+  BorderRadiusGeometry get borderRadius {
+    return context.theme.radiuses.sm.circular;
+  }
+
+  BoxBorder? get border {
+    return switch (widget.type) {
+      ButtonType.secondary => BoxBorder.all(
+        color: context.theme.colorsPalette.border.primary,
+        width: 1,
+        style: BorderStyle.solid,
+        strokeAlign: BorderSide.strokeAlignInside,
+      ),
+      _ => null,
+    };
+  }
+
+  double get iconDimension {
+    return switch (widget.size) {
+      ButtonSize.sm => 14,
+      ButtonSize.md => 18,
+      ButtonSize.lg => 22,
+    };
+  }
+
+  TextStyle get textStyle {
+    return switch (widget.size) {
+      ButtonSize.sm => context.theme.commonTextStyles.buttonS,
+      ButtonSize.md => context.theme.commonTextStyles.buttonM,
+      ButtonSize.lg => context.theme.commonTextStyles.buttonL,
+    };
+  }
+
+  Widget? buildIcon(String? iconPath) {
+    return iconPath?.vector(
+      width: iconDimension,
+      height: iconDimension,
+      colorFilter: foregroundColor.filter,
+    );
+  }
+
+  List<BoxShadow>? get boxShadow {
+    if (isActive || isDisabled) return [context.theme.shadows.none];
+
+    return switch (widget.type) {
+      ButtonType.primary => [context.theme.shadows.sm],
+      _ => [context.theme.shadows.none],
+    };
+  }
+
+  Gradient? get backgroundGradient {
+    if (isDisabled) return null;
+    if (widget.type == ButtonType.primary) {
+      return LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          isActive
+              ? context.theme.colorsPalette.accent.primaryMuted
+              : context.theme.colorsPalette.accent.primary,
+          isActive
+              ? context.theme.colorsPalette.accent.primaryMuted.withValues(
+                  alpha: 0.8,
+                )
+              : context.theme.colorsPalette.accent.primary.withValues(
+                  alpha: 0.8,
+                ),
+        ],
+      );
+    }
+    return null;
+  }
+
+  Color get backgroundColor {
+    if (isDisabled) return context.theme.colorsPalette.background.surfaceMuted;
+
+    return widget.backgroundColor ??
+        switch (widget.type) {
+          ButtonType.primary =>
+            isActive
+                ? context.theme.colorsPalette.accent.primaryMuted
+                : context.theme.colorsPalette.accent.primary,
+          ButtonType.secondary =>
+            isActive
+                ? context.theme.colorsPalette.background.surface
+                : context.theme.colorsPalette.background.surfaceMuted,
+          ButtonType.danger => context.theme.colorsPalette.accent.danger,
+          ButtonType.warning => context.theme.colorsPalette.accent.warning,
+          ButtonType.success => context.theme.colorsPalette.accent.success,
+          ButtonType.ghost =>
+            isActive
+                ? context.theme.colorsPalette.background.surfaceMuted
+                : context.theme.colorsPalette.base.transparent,
+        };
+  }
+
+  Color get foregroundColor {
+    if (isDisabled) return context.theme.colorsPalette.text.muted;
+
+    return widget.foregroundColor ??
+        switch (widget.type) {
+          ButtonType.primary =>
+            isActive
+                ? context.theme.colorsPalette.text.primary
+                : context.theme.colorsPalette.background.surface,
+          ButtonType.secondary => context.theme.colorsPalette.accent.primary,
+          ButtonType.danger => context.theme.colorsPalette.background.surface,
+          ButtonType.warning => context.theme.colorsPalette.background.surface,
+          ButtonType.success => context.theme.colorsPalette.background.surface,
+          ButtonType.ghost =>
+            isActive
+                ? context.theme.colorsPalette.text.secondary
+                : context.theme.colorsPalette.text.primary,
+        };
+  }
+
+  void _onTap() {
+    if (widget.isLoading) return;
+    widget.onTap?.call();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: isDisabled ? SystemMouseCursors.basic : SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.isDisabled ? null : _onTap,
+        onTapDown: (_) => setState(() => isActive = true),
+        onTapCancel: () => setState(() => isActive = false),
+        onTapUp: (_) => setState(() => isActive = false),
+        child: AnimatedContainer(
+          duration: kThemeAnimationDuration,
+          decoration: BoxDecoration(
+            color: backgroundGradient == null ? backgroundColor : null,
+            gradient: backgroundGradient,
+            boxShadow: boxShadow,
+            borderRadius: borderRadius,
+            border: border,
+          ),
+          padding: innerPadding,
+          alignment: widget.alignment,
+          height: height,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Stack(
+                children: [
+                  Opacity(
+                    opacity: widget.type == ButtonType.ghost && widget.isLoading
+                        ? 0
+                        : 1,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (widget.leftIcon != null)
+                          buildIcon(widget.leftIcon)!,
+                        if (widget.title != null)
+                          Flexible(
+                            child: Text(
+                              widget.title!,
+                              style: textStyle.copyWith(color: foregroundColor),
+                            ),
+                          ),
+                        if (widget.rightIcon != null)
+                          buildIcon(widget.rightIcon)!,
+                      ],
+                    ),
+                  ),
+                  Positioned.fill(
+                    child: AnimatedCrossFade(
+                      firstChild: SizedBox.shrink(),
+                      secondChild: ColoredBox(
+                        color: backgroundColor,
+                        child: Center(
+                          child: RotatingIcon(
+                            child: buildIcon(
+                              WorklogStudioAssets.vectors.rotateClockwise24Svg,
+                            )!,
+                          ),
+                        ),
+                      ),
+                      crossFadeState: widget.isLoading
+                          ? CrossFadeState.showSecond
+                          : CrossFadeState.showFirst,
+                      duration: kThemeAnimationDuration,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+enum ButtonType { primary, secondary, danger, success, warning, ghost }
+
+enum ButtonSize { sm, md, lg }
+
+class RotatingIcon extends StatefulWidget {
+  final Widget child;
+  final Duration duration;
+  final Curve curve;
+
+  const RotatingIcon({
+    required this.child,
+    super.key,
+    this.duration = const Duration(seconds: 1),
+    this.curve = Curves.fastOutSlowIn,
+  });
+
+  @override
+  State<RotatingIcon> createState() => _RotatingIconState();
+}
+
+class _RotatingIconState extends State<RotatingIcon>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController controller;
+  late final Animation<double> animation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    controller = AnimationController(duration: widget.duration, vsync: this)
+      ..repeat();
+    animation = CurvedAnimation(parent: controller, curve: widget.curve);
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RotationTransition(turns: animation, child: widget.child);
+  }
+}

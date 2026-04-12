@@ -1,0 +1,17 @@
+name: at_home_development
+publish_to: none
+
+environment:
+  sdk: ^3.10.1
+  
+workspace:
+  - apps/worklog_studio
+  - packages/worklog_studio_style_system
+  - packages/vector_svg
+
+dev_dependencies:
+  # Lint rules
+  surf_lint_rules: ^4.0.0
+  melos: ^7.3.0
+
+sdkPath: .fvm/flutter_sdk

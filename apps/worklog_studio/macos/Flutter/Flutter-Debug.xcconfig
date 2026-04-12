@@ -1,0 +1,8 @@
+#include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"
+#include "ephemeral/Flutter-Generated.xcconfig"
+MACOSX_DEPLOYMENT_TARGET = 14.0
+XROS_DEPLOYMENT_TARGET =
+IPHONEOS_DEPLOYMENT_TARGET =
+TVOS_DEPLOYMENT_TARGET =
+WATCHOS_DEPLOYMENT_TARGET =
+DRIVERKIT_DEPLOYMENT_TARGET =

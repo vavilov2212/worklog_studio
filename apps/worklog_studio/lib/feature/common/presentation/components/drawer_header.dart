@@ -1,0 +1,135 @@
+import 'package:flutter/material.dart';
+import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
+
+class DrawerHeader extends StatefulWidget {
+  final VoidCallback onClose;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
+  final List<Widget>? extraActions;
+
+  const DrawerHeader({
+    super.key,
+    required this.onClose,
+    this.onEdit,
+    this.onDelete,
+    this.extraActions,
+  });
+
+  @override
+  State<DrawerHeader> createState() => _DrawerHeaderState();
+}
+
+class _DrawerHeaderState extends State<DrawerHeader> {
+  final PopoverController _popoverController = PopoverController();
+
+  @override
+  void dispose() {
+    _popoverController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    final palette = theme.colorsPalette;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        theme.spacings.s24,
+        theme.spacings.s24,
+        theme.spacings.s24,
+        theme.spacings.s16,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          IconButton(
+            icon: Icon(Icons.close, color: palette.text.secondary),
+            onPressed: widget.onClose,
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (widget.extraActions != null) ...widget.extraActions!,
+              IconButton(
+                icon: Icon(Icons.edit_outlined, color: palette.text.secondary),
+                onPressed: widget.onEdit ?? () {},
+              ),
+              PopoverPrimitive(
+                controller: _popoverController,
+                targetAnchor: Alignment.bottomRight,
+                followerAnchor: Alignment.topRight,
+                width: 180,
+                trigger: IconButton(
+                  icon: Icon(Icons.more_horiz, color: palette.text.secondary),
+                  onPressed: _popoverController.toggle,
+                ),
+                contentBuilder: (context) {
+                  return PopoverSurface(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        vertical: theme.spacings.s8,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _PopoverAction(
+                            icon: Icons.delete_outline,
+                            label: 'Delete',
+                            color: palette.accent.danger,
+                            onTap: () {
+                              _popoverController.hide();
+                              widget.onDelete?.call();
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PopoverAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _PopoverAction({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: theme.spacings.s16,
+          vertical: theme.spacings.s12,
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 20),
+            SizedBox(width: theme.spacings.s12),
+            Text(
+              label,
+              style: theme.commonTextStyles.body.copyWith(color: color),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

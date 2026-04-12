@@ -1,0 +1,94 @@
+import 'package:flutter/material.dart';
+import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
+import 'package:vector_svg/vector_svg.dart';
+
+class SidebarItem extends StatefulWidget {
+  final String label;
+  final String? iconPath;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const SidebarItem({
+    required this.label,
+    required this.onTap,
+    this.iconPath,
+    this.isActive = false,
+    super.key,
+  });
+
+  @override
+  State<SidebarItem> createState() => _SidebarItemState();
+}
+
+class _SidebarItemState extends State<SidebarItem> {
+  bool isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    final palette = theme.colorsPalette;
+
+    final backgroundColor = widget.isActive
+        ? palette.background.surface
+        : isHovered
+        ? palette.background.surfaceMuted.withValues(alpha: 0.5)
+        : palette.base.transparent;
+
+    final textColor = widget.isActive
+        ? palette.text.primary
+        : palette.text.secondary;
+
+    final iconColor = widget.isActive
+        ? palette.accent.primary
+        : palette.text.muted;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => isHovered = true),
+      onExit: (_) => setState(() => isHovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: kThemeAnimationDuration,
+          padding: EdgeInsets.symmetric(
+            horizontal: theme.spacings.s16,
+            vertical: theme.spacings.s12,
+          ),
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: theme.radiuses.md.circular,
+          ),
+          child: Row(
+            children: [
+              if (widget.iconPath != null) ...[
+                widget.iconPath!.vector(
+                  width: 20,
+                  height: 20,
+                  colorFilter: iconColor.filter,
+                ),
+                SizedBox(width: theme.spacings.s12),
+              ],
+              Expanded(
+                child: Text(
+                  widget.label,
+                  style: theme.commonTextStyles.bodyBold.copyWith(
+                    color: textColor,
+                  ),
+                ),
+              ),
+              if (widget.isActive)
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: palette.accent.primary,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

@@ -1,0 +1,34 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "worklog_studio",
+      "request": "launch",
+      "type": "dart",
+      "program": "apps/worklog_studio/lib/main.dart"
+
+    },
+    {
+      "name": "[dev] worklog_studio (debug mode)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "debug",
+      "args": [
+        "--flavor development",
+        "--no-enable-impeller"
+      ],
+      "program": "apps/worklog_studio/lib/main_development.dart"
+    },
+    {
+      "name": "[prod] worklog_studio (release mode)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "release",
+      "program": "apps/worklog_studio/lib/main.dart"
+
+    }
+  ]
+}

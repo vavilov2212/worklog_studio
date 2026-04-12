@@ -1,0 +1,74 @@
+import 'dart:ui';
+
+class ColorsPalette {
+  final BsColors base;
+  final BackgroundColors background;
+  final BorderColors border;
+  final TextColors text;
+  final AccentColors accent;
+
+  const ColorsPalette({
+    required this.base,
+    required this.background,
+    required this.border,
+    required this.text,
+    required this.accent,
+  });
+}
+
+class BsColors {
+  final Color transparent;
+  const BsColors({required this.transparent});
+}
+
+class BackgroundColors {
+  final Color canvas;
+  final Color surface;
+  final Color surfaceMuted;
+
+  const BackgroundColors({
+    required this.canvas,
+    required this.surface,
+    required this.surfaceMuted,
+  });
+}
+
+class BorderColors {
+  final Color primary;
+  final Color hover;
+  final Color focus;
+
+  const BorderColors({
+    required this.primary,
+    required this.hover,
+    required this.focus,
+  });
+}
+
+class TextColors {
+  final Color primary;
+  final Color secondary;
+  final Color muted;
+
+  const TextColors({
+    required this.primary,
+    required this.secondary,
+    required this.muted,
+  });
+}
+
+class AccentColors {
+  final Color primary;
+  final Color primaryMuted;
+  final Color danger;
+  final Color success;
+  final Color warning;
+
+  const AccentColors({
+    required this.primary,
+    required this.primaryMuted,
+    required this.danger,
+    required this.success,
+    required this.warning,
+  });
+}
