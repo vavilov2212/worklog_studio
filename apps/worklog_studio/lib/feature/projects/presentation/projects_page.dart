@@ -29,7 +29,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   void _handleCreateProject() {
     setState(() {
       selectedProject = Project(
-        id: 'new',
+        id: '',
         name: '',
         description: '',
         createdAt: DateTime.now(),
@@ -63,6 +63,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           project: selectedProject,
           isOpen: selectedProject != null,
           onClose: _closePanel,
+          isNew: selectedProject != null && selectedProject!.id.isEmpty,
         ),
       ],
     );

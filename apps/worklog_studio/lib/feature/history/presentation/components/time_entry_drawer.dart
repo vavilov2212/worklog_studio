@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_content.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_header.dart';
 import 'package:worklog_studio/feature/common/presentation/resizable_drawer.dart';
+import 'package:worklog_studio/feature/common/presentation/components/inline_field.dart';
 import 'package:worklog_studio/state/time_tracker_state.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
@@ -36,6 +37,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
   late TextEditingController _endTimeController;
   String? _selectedProjectId;
   String? _selectedTaskId;
+  String? _editingField;
 
   @override
   void initState() {
@@ -245,38 +247,93 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                         if (widget.resolvedEntry!.isRunning)
                           SizedBox(height: theme.spacings.s24),
 
-                        Select<String>(
-                          value: _selectedProjectId,
-                          placeholder: 'Select Project',
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedProjectId = value;
-                              _selectedTaskId =
-                                  null; // Reset task when project changes
-                            });
+                        // Project Select
+                        Consumer<ProjectTaskState>(
+                          builder: (context, state, child) {
+                            final selectedProject = state.projects
+                                .where((p) => p.id == _selectedProjectId)
+                                .firstOrNull;
+
+                            return InlineField(
+                              label: 'PROJECT',
+                              value: selectedProject?.name ?? '',
+                              placeholder: 'Select Project',
+                              isEditing: _editingField == 'project',
+                              onTap: () =>
+                                  setState(() => _editingField = 'project'),
+                              editWidget: Focus(
+                                onFocusChange: (hasFocus) {
+                                  if (!hasFocus) {
+                                    setState(() => _editingField = null);
+                                  }
+                                },
+                                child: Select<String>(
+                                  value: _selectedProjectId,
+                                  placeholder: 'Select Project',
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _selectedProjectId = value;
+                                      _selectedTaskId = null;
+                                      _editingField = null;
+                                    });
+                                  },
+                                  options: state.projects.map((p) {
+                                    return SelectOption(
+                                      value: p.id,
+                                      label: p.name,
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                            );
                           },
-                          options: projectTaskState.projects.map((p) {
-                            return SelectOption(value: p.id, label: p.name);
-                          }).toList(),
                         ),
                         SizedBox(height: theme.spacings.s16),
-                        Select<String>(
-                          value: _selectedTaskId,
-                          placeholder: 'Select Task',
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedTaskId = value;
-                            });
+                        // Task Select
+                        Consumer<ProjectTaskState>(
+                          builder: (context, state, child) {
+                            final selectedTask = state.tasks
+                                .where((t) => t.id == _selectedTaskId)
+                                .firstOrNull;
+
+                            return InlineField(
+                              label: 'TASK',
+                              value: selectedTask?.title ?? '',
+                              placeholder: 'Select Task',
+                              isEditing: _editingField == 'task',
+                              onTap: () =>
+                                  setState(() => _editingField = 'task'),
+                              editWidget: Focus(
+                                onFocusChange: (hasFocus) {
+                                  if (!hasFocus) {
+                                    setState(() => _editingField = null);
+                                  }
+                                },
+                                child: Select<String>(
+                                  value: _selectedTaskId,
+                                  placeholder: 'Select Task',
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _selectedTaskId = value;
+                                      _editingField = null;
+                                    });
+                                  },
+                                  options: state.tasks
+                                      .where(
+                                        (t) =>
+                                            t.projectId == _selectedProjectId,
+                                      )
+                                      .map((t) {
+                                        return SelectOption(
+                                          value: t.id,
+                                          label: t.title,
+                                        );
+                                      })
+                                      .toList(),
+                                ),
+                              ),
+                            );
                           },
-                          options: projectTaskState.tasks
-                              .where((t) => t.projectId == _selectedProjectId)
-                              .map((t) {
-                                return SelectOption(
-                                  value: t.id,
-                                  label: t.title,
-                                );
-                              })
-                              .toList(),
                         ),
                       ],
                     ),
@@ -364,46 +421,51 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                           Row(
                             children: [
                               Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'START TIME',
-                                      style: theme.commonTextStyles.caption3Bold
-                                          .copyWith(
-                                            color: palette.text.muted,
-                                            letterSpacing: 1.0,
-                                          ),
-                                    ),
-                                    SizedBox(height: theme.spacings.s4),
-                                    PrimaryInput(
-                                      label: 'START TIME',
+                                child: InlineField(
+                                  label: 'START TIME',
+                                  value: _startTimeController.text,
+                                  placeholder: 'HH:mm',
+                                  isEditing: _editingField == 'startTime',
+                                  onTap: () => setState(
+                                    () => _editingField = 'startTime',
+                                  ),
+                                  editWidget: Focus(
+                                    onFocusChange: (hasFocus) {
+                                      if (!hasFocus) {
+                                        setState(() => _editingField = null);
+                                      }
+                                    },
+                                    child: PrimaryInput(
+                                      label: null,
                                       controller: _startTimeController,
                                       hintText: 'HH:mm',
+                                      autofocus: true,
                                     ),
-                                  ],
+                                  ),
                                 ),
                               ),
                               SizedBox(width: theme.spacings.s16),
                               Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'END TIME',
-                                      style: theme.commonTextStyles.caption3Bold
-                                          .copyWith(
-                                            color: palette.text.muted,
-                                            letterSpacing: 1.0,
-                                          ),
-                                    ),
-                                    SizedBox(height: theme.spacings.s4),
-                                    PrimaryInput(
-                                      label: 'START TIME',
+                                child: InlineField(
+                                  label: 'END TIME',
+                                  value: _endTimeController.text,
+                                  placeholder: 'HH:mm',
+                                  isEditing: _editingField == 'endTime',
+                                  onTap: () =>
+                                      setState(() => _editingField = 'endTime'),
+                                  editWidget: Focus(
+                                    onFocusChange: (hasFocus) {
+                                      if (!hasFocus) {
+                                        setState(() => _editingField = null);
+                                      }
+                                    },
+                                    child: PrimaryInput(
+                                      label: null,
                                       controller: _endTimeController,
                                       hintText: 'HH:mm',
+                                      autofocus: true,
                                     ),
-                                  ],
+                                  ),
                                 ),
                               ),
                             ],
@@ -411,11 +473,28 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                           SizedBox(height: theme.spacings.s32),
 
                           // Comments
-                          TextArea(
+                          InlineField(
                             label: 'COMMENTS',
-                            hintText: 'Add a comment...',
-                            controller: _commentController,
-                            maxLines: 4,
+                            value: _commentController.text,
+                            placeholder: 'Add a comment...',
+                            isEditing: _editingField == 'comment',
+                            isTextArea: true,
+                            onTap: () =>
+                                setState(() => _editingField = 'comment'),
+                            editWidget: Focus(
+                              onFocusChange: (hasFocus) {
+                                if (!hasFocus) {
+                                  setState(() => _editingField = null);
+                                }
+                              },
+                              child: TextArea(
+                                label: null,
+                                hintText: 'Add a comment...',
+                                controller: _commentController,
+                                maxLines: 4,
+                                autofocus: true,
+                              ),
+                            ),
                           ),
                           SizedBox(height: theme.spacings.s32),
 

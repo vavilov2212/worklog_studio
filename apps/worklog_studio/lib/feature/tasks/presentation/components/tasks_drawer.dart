@@ -4,6 +4,7 @@ import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_content.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_header.dart';
 import 'package:worklog_studio/feature/common/presentation/resizable_drawer.dart';
+import 'package:worklog_studio/feature/common/presentation/components/inline_field.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
@@ -11,12 +12,14 @@ class TaskDrawer extends StatefulWidget {
   final Task? task;
   final bool isOpen;
   final VoidCallback onClose;
+  final bool isNew;
 
   const TaskDrawer({
     super.key,
     required this.task,
     required this.isOpen,
     required this.onClose,
+    required this.isNew,
   });
 
   @override
@@ -28,6 +31,7 @@ class _TaskDrawerState extends State<TaskDrawer> {
   late TextEditingController _titleController;
   late TextEditingController _descriptionController;
   String? _selectedProjectId;
+  String? _editingField;
 
   @override
   void initState() {
@@ -61,7 +65,7 @@ class _TaskDrawerState extends State<TaskDrawer> {
     super.dispose();
   }
 
-  bool get _isNew => widget.task?.id == 'new';
+  bool get _isNew => widget.isNew;
 
   void _handleSave() async {
     final state = context.read<ProjectTaskState>();
@@ -200,10 +204,25 @@ class _TaskDrawerState extends State<TaskDrawer> {
                         ],
 
                         // Title Input
-                        PrimaryInput(
+                        InlineField(
                           label: 'TASK TITLE',
-                          hintText: 'Enter task title...',
-                          controller: _titleController,
+                          value: _titleController.text,
+                          placeholder: 'Enter task title...',
+                          isEditing: _editingField == 'title',
+                          onTap: () => setState(() => _editingField = 'title'),
+                          editWidget: Focus(
+                            onFocusChange: (hasFocus) {
+                              if (!hasFocus) {
+                                setState(() => _editingField = null);
+                              }
+                            },
+                            child: PrimaryInput(
+                              label: null,
+                              hintText: 'Enter task title...',
+                              controller: _titleController,
+                              autofocus: true,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -216,11 +235,28 @@ class _TaskDrawerState extends State<TaskDrawer> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Description
-                          TextArea(
+                          InlineField(
                             label: 'DESCRIPTION',
-                            hintText: 'Add a description...',
-                            controller: _descriptionController,
-                            maxLines: 4,
+                            value: _descriptionController.text,
+                            placeholder: 'Add a description...',
+                            isEditing: _editingField == 'description',
+                            isTextArea: true,
+                            onTap: () =>
+                                setState(() => _editingField = 'description'),
+                            editWidget: Focus(
+                              onFocusChange: (hasFocus) {
+                                if (!hasFocus) {
+                                  setState(() => _editingField = null);
+                                }
+                              },
+                              child: TextArea(
+                                label: null,
+                                hintText: 'Add a description...',
+                                controller: _descriptionController,
+                                maxLines: 4,
+                                autofocus: true,
+                              ),
+                            ),
                           ),
                           SizedBox(height: theme.spacings.s32),
 
@@ -228,27 +264,49 @@ class _TaskDrawerState extends State<TaskDrawer> {
                           Row(
                             children: [
                               Expanded(
-                                child: _DetailItem(
-                                  label: 'PROJECT',
-                                  child: Consumer<ProjectTaskState>(
-                                    builder: (context, state, child) {
-                                      return Select<String>(
-                                        value: _selectedProjectId,
-                                        placeholder: 'Select Project',
-                                        onChanged: (value) {
-                                          setState(() {
-                                            _selectedProjectId = value;
-                                          });
+                                child: Consumer<ProjectTaskState>(
+                                  builder: (context, state, child) {
+                                    final selectedProject = state.projects
+                                        .where(
+                                          (p) => p.id == _selectedProjectId,
+                                        )
+                                        .firstOrNull;
+
+                                    return InlineField(
+                                      label: 'PROJECT',
+                                      value: selectedProject?.name ?? '',
+                                      placeholder: 'Select Project',
+                                      isEditing: _editingField == 'project',
+                                      onTap: () => setState(
+                                        () => _editingField = 'project',
+                                      ),
+                                      editWidget: Focus(
+                                        onFocusChange: (hasFocus) {
+                                          if (!hasFocus) {
+                                            setState(
+                                              () => _editingField = null,
+                                            );
+                                          }
                                         },
-                                        options: state.projects.map((p) {
-                                          return SelectOption(
-                                            value: p.id,
-                                            label: p.name,
-                                          );
-                                        }).toList(),
-                                      );
-                                    },
-                                  ),
+                                        child: Select<String>(
+                                          value: _selectedProjectId,
+                                          placeholder: 'Select Project',
+                                          onChanged: (value) {
+                                            setState(() {
+                                              _selectedProjectId = value;
+                                              _editingField = null;
+                                            });
+                                          },
+                                          options: state.projects.map((p) {
+                                            return SelectOption(
+                                              value: p.id,
+                                              label: p.name,
+                                            );
+                                          }).toList(),
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
                               SizedBox(width: theme.spacings.s16),

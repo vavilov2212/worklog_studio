@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 class SelectTrigger extends StatelessWidget {
   final String? label;
@@ -8,14 +9,20 @@ class SelectTrigger extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.theme;
+    final palette = theme.colorsPalette;
     final hasValue = label != null;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      height: theme.spacings.s48,
+      padding: EdgeInsets.symmetric(
+        horizontal: theme.spacings.s12,
+        vertical: theme.spacings.s12,
+      ),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade400),
-        borderRadius: BorderRadius.circular(8),
-        color: Colors.white,
+        border: Border.all(color: palette.border.primary),
+        borderRadius: theme.radiuses.md.circular,
+        color: palette.background.surface,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -23,12 +30,14 @@ class SelectTrigger extends StatelessWidget {
           Expanded(
             child: Text(
               hasValue ? label! : placeholder,
-              style: TextStyle(
-                color: hasValue ? Colors.black : Colors.grey.shade500,
+              style: theme.commonTextStyles.body.copyWith(
+                color: hasValue ? palette.text.primary : palette.text.muted,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          const Icon(Icons.unfold_more, size: 18),
+          Icon(Icons.unfold_more, size: 18, color: palette.text.muted),
         ],
       ),
     );
