@@ -213,11 +213,9 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
                           placeholder: 'Enter project name...',
                           isEditing: _editingField == 'name',
                           onTap: () => setState(() => _editingField = 'name'),
-                          editWidget: Focus(
-                            onFocusChange: (hasFocus) {
-                              if (!hasFocus) {
-                                setState(() => _editingField = null);
-                              }
+                          editWidget: TapRegion(
+                            onTapOutside: (_) {
+                              setState(() => _editingField = null);
                             },
                             child: PrimaryInput(
                               label: null,
@@ -246,17 +244,14 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
                             isTextArea: true,
                             onTap: () =>
                                 setState(() => _editingField = 'description'),
-                            editWidget: Focus(
-                              onFocusChange: (hasFocus) {
-                                if (!hasFocus) {
-                                  setState(() => _editingField = null);
-                                }
+                            editWidget: TapRegion(
+                              onTapOutside: (_) {
+                                setState(() => _editingField = null);
                               },
                               child: TextArea(
                                 label: null,
                                 hintText: 'Add a description...',
                                 controller: _descriptionController,
-                                maxLines: 4,
                                 autofocus: true,
                               ),
                             ),

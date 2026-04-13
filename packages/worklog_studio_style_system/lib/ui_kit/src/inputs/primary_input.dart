@@ -122,6 +122,9 @@ class _PrimaryInputState extends State<PrimaryInput> {
             child: AnimatedContainer(
               duration: kThemeAnimationDuration,
               height: context.theme.spacings.s48,
+              padding: EdgeInsets.symmetric(
+                horizontal: context.theme.spacings.s12,
+              ),
               decoration: BoxDecoration(
                 color: backgroundColor,
                 borderRadius: context.theme.radiuses.md.circular,
@@ -132,14 +135,8 @@ class _PrimaryInputState extends State<PrimaryInput> {
                 children: [
                   if (widget.prefixWidget != null)
                     Padding(
-                      padding: EdgeInsets.only(
-                        top:
-                            widget.prefixIconPadding ??
-                            context.theme.spacings.s12,
-                        bottom:
-                            widget.prefixIconPadding ??
-                            context.theme.spacings.s12,
-                        left:
+                      padding: EdgeInsets.symmetric(
+                        vertical:
                             widget.prefixIconPadding ??
                             context.theme.spacings.s12,
                       ),
@@ -177,14 +174,8 @@ class _PrimaryInputState extends State<PrimaryInput> {
                   ),
                   if (widget.suffixWidget != null)
                     Padding(
-                      padding: EdgeInsets.only(
-                        top:
-                            widget.suffixIconPadding ??
-                            context.theme.spacings.s12,
-                        bottom:
-                            widget.suffixIconPadding ??
-                            context.theme.spacings.s12,
-                        right:
+                      padding: EdgeInsets.symmetric(
+                        vertical:
                             widget.suffixIconPadding ??
                             context.theme.spacings.s12,
                       ),

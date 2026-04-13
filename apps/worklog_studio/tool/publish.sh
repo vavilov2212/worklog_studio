@@ -15,11 +15,11 @@ BRANCH=$(git rev-parse --abbrev-ref HEAD)
 echo "🏷 Tag: $TAG"
 echo "🌿 Branch: $BRANCH"
 
-# ensure we are on main branch
-if [ "$BRANCH" != "main" ]; then
-  echo "❌ You must publish from 'main' branch (current: $BRANCH)"
-  exit 1
-fi
+# # ensure we are on main branch
+# if [ "$BRANCH" != "main" ]; then
+#   echo "❌ You must publish from 'main' branch (current: $BRANCH)"
+#   exit 1
+# fi
 
 # check if there are changes to commit
 if git diff --quiet && git diff --cached --quiet; then

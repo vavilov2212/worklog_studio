@@ -48,11 +48,13 @@ class BorderColors {
 class TextColors {
   final Color primary;
   final Color secondary;
+  final Color secondary2;
   final Color muted;
 
   const TextColors({
     required this.primary,
     required this.secondary,
+    required this.secondary2,
     required this.muted,
   });
 }

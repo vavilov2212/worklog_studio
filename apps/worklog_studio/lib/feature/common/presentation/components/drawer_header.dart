@@ -3,14 +3,12 @@ import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 class DrawerHeader extends StatefulWidget {
   final VoidCallback onClose;
-  final VoidCallback? onEdit;
   final VoidCallback? onDelete;
   final List<Widget>? extraActions;
 
   const DrawerHeader({
     super.key,
     required this.onClose,
-    this.onEdit,
     this.onDelete,
     this.extraActions,
   });
@@ -51,10 +49,6 @@ class _DrawerHeaderState extends State<DrawerHeader> {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (widget.extraActions != null) ...widget.extraActions!,
-              IconButton(
-                icon: Icon(Icons.edit_outlined, color: palette.text.secondary),
-                onPressed: widget.onEdit ?? () {},
-              ),
               PopoverPrimitive(
                 controller: _popoverController,
                 targetAnchor: Alignment.bottomRight,

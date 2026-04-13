@@ -78,6 +78,20 @@ class CommonTextStyles {
     fontFamily: 'Inter',
   );
 
+  final captionBold = const TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w700,
+    height: 1.3,
+    fontFamily: 'Inter',
+  );
+
+  final captionSemiBold = const TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w600,
+    height: 1.3,
+    fontFamily: 'Inter',
+  );
+
   final caption2 = const TextStyle(
     fontSize: 10,
     fontWeight: FontWeight.w400,

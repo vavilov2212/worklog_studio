@@ -210,11 +210,9 @@ class _TaskDrawerState extends State<TaskDrawer> {
                           placeholder: 'Enter task title...',
                           isEditing: _editingField == 'title',
                           onTap: () => setState(() => _editingField = 'title'),
-                          editWidget: Focus(
-                            onFocusChange: (hasFocus) {
-                              if (!hasFocus) {
-                                setState(() => _editingField = null);
-                              }
+                          editWidget: TapRegion(
+                            onTapOutside: (_) {
+                              setState(() => _editingField = null);
                             },
                             child: PrimaryInput(
                               label: null,
@@ -243,17 +241,14 @@ class _TaskDrawerState extends State<TaskDrawer> {
                             isTextArea: true,
                             onTap: () =>
                                 setState(() => _editingField = 'description'),
-                            editWidget: Focus(
-                              onFocusChange: (hasFocus) {
-                                if (!hasFocus) {
-                                  setState(() => _editingField = null);
-                                }
+                            editWidget: TapRegion(
+                              onTapOutside: (_) {
+                                setState(() => _editingField = null);
                               },
                               child: TextArea(
                                 label: null,
                                 hintText: 'Add a description...',
                                 controller: _descriptionController,
-                                maxLines: 4,
                                 autofocus: true,
                               ),
                             ),
@@ -280,13 +275,9 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                       onTap: () => setState(
                                         () => _editingField = 'project',
                                       ),
-                                      editWidget: Focus(
-                                        onFocusChange: (hasFocus) {
-                                          if (!hasFocus) {
-                                            setState(
-                                              () => _editingField = null,
-                                            );
-                                          }
+                                      editWidget: TapRegion(
+                                        onTapOutside: (_) {
+                                          setState(() => _editingField = null);
                                         },
                                         child: Select<String>(
                                           value: _selectedProjectId,

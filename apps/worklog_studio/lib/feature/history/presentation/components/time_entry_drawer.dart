@@ -226,26 +226,28 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                     meta: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (widget.resolvedEntry!.isRunning)
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: theme.spacings.s12,
-                              vertical: theme.spacings.s4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: palette.accent.primaryMuted,
-                              borderRadius: theme.radiuses.pill.circular,
-                            ),
-                            child: Text(
-                              'ACTIVE LOG',
-                              style: theme.commonTextStyles.caption3Bold
-                                  .copyWith(color: palette.accent.primary),
-                            ),
-                          )
-                        else
-                          const SizedBox.shrink(),
-                        if (widget.resolvedEntry!.isRunning)
-                          SizedBox(height: theme.spacings.s24),
+                        if (!_isNew) ...[
+                          Row(
+                            children: [
+                              StatusBadge(
+                                status: widget.resolvedEntry!.isRunning
+                                    ? BadgeStatus.inProgress
+                                    : BadgeStatus.ready,
+                                label: getStatusText(
+                                  widget.resolvedEntry!.entry.status,
+                                ),
+                              ),
+                              SizedBox(width: theme.spacings.s12),
+                              Text(
+                                'Created ${_formatTime(widget.resolvedEntry!.entry.startAt)}',
+                                style: theme.commonTextStyles.body2.copyWith(
+                                  color: palette.text.secondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: theme.spacings.s32),
+                        ],
 
                         // Project Select
                         Consumer<ProjectTaskState>(
@@ -345,6 +347,56 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Timeline
+                          Row(
+                            children: [
+                              Expanded(
+                                child: InlineField(
+                                  label: 'START TIME',
+                                  value: _startTimeController.text,
+                                  placeholder: 'HH:mm',
+                                  isEditing: _editingField == 'startTime',
+                                  onTap: () => setState(
+                                    () => _editingField = 'startTime',
+                                  ),
+                                  editWidget: TapRegion(
+                                    onTapOutside: (_) {
+                                      setState(() => _editingField = null);
+                                    },
+                                    child: PrimaryInput(
+                                      label: null,
+                                      controller: _startTimeController,
+                                      hintText: 'HH:mm',
+                                      autofocus: true,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: theme.spacings.s16),
+                              Expanded(
+                                child: InlineField(
+                                  label: 'END TIME',
+                                  value: _endTimeController.text,
+                                  placeholder: 'HH:mm',
+                                  isEditing: _editingField == 'endTime',
+                                  onTap: () =>
+                                      setState(() => _editingField = 'endTime'),
+                                  editWidget: TapRegion(
+                                    onTapOutside: (_) {
+                                      setState(() => _editingField = null);
+                                    },
+                                    child: PrimaryInput(
+                                      label: null,
+                                      controller: _endTimeController,
+                                      hintText: 'HH:mm',
+                                      autofocus: true,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: theme.spacings.s32),
                           // Metrics Grid
                           Row(
                             children: [
@@ -417,61 +469,6 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                           ),
                           SizedBox(height: theme.spacings.s32),
 
-                          // Timeline
-                          Row(
-                            children: [
-                              Expanded(
-                                child: InlineField(
-                                  label: 'START TIME',
-                                  value: _startTimeController.text,
-                                  placeholder: 'HH:mm',
-                                  isEditing: _editingField == 'startTime',
-                                  onTap: () => setState(
-                                    () => _editingField = 'startTime',
-                                  ),
-                                  editWidget: Focus(
-                                    onFocusChange: (hasFocus) {
-                                      if (!hasFocus) {
-                                        setState(() => _editingField = null);
-                                      }
-                                    },
-                                    child: PrimaryInput(
-                                      label: null,
-                                      controller: _startTimeController,
-                                      hintText: 'HH:mm',
-                                      autofocus: true,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(width: theme.spacings.s16),
-                              Expanded(
-                                child: InlineField(
-                                  label: 'END TIME',
-                                  value: _endTimeController.text,
-                                  placeholder: 'HH:mm',
-                                  isEditing: _editingField == 'endTime',
-                                  onTap: () =>
-                                      setState(() => _editingField = 'endTime'),
-                                  editWidget: Focus(
-                                    onFocusChange: (hasFocus) {
-                                      if (!hasFocus) {
-                                        setState(() => _editingField = null);
-                                      }
-                                    },
-                                    child: PrimaryInput(
-                                      label: null,
-                                      controller: _endTimeController,
-                                      hintText: 'HH:mm',
-                                      autofocus: true,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: theme.spacings.s32),
-
                           // Comments
                           InlineField(
                             label: 'COMMENTS',
@@ -481,17 +478,14 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                             isTextArea: true,
                             onTap: () =>
                                 setState(() => _editingField = 'comment'),
-                            editWidget: Focus(
-                              onFocusChange: (hasFocus) {
-                                if (!hasFocus) {
-                                  setState(() => _editingField = null);
-                                }
+                            editWidget: TapRegion(
+                              onTapOutside: (_) {
+                                setState(() => _editingField = null);
                               },
                               child: TextArea(
                                 label: null,
                                 hintText: 'Add a comment...',
                                 controller: _commentController,
-                                maxLines: 4,
                                 autofocus: true,
                               ),
                             ),
@@ -531,6 +525,15 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
               ],
             ),
     );
+  }
+
+  String getStatusText(TimeEntryStatus status) {
+    switch (status) {
+      case TimeEntryStatus.running:
+        return 'RUNNING';
+      case TimeEntryStatus.stopped:
+        return 'STOPPED';
+    }
   }
 
   String _formatDuration(Duration duration) {

@@ -16,6 +16,7 @@ const lightColorsPalette = ColorsPalette(
   text: TextColors(
     primary: TxtColors.primary,
     secondary: TxtColors.secondary,
+    secondary2: TxtColors.secondary2,
     muted: TxtColors.muted,
   ),
   accent: AccentColors(
@@ -42,6 +43,7 @@ const darkColorsPalette = ColorsPalette(
   text: TextColors(
     primary: TxtColors.primary,
     secondary: TxtColors.secondary,
+    secondary2: TxtColors.secondary2,
     muted: TxtColors.muted,
   ),
   accent: AccentColors(

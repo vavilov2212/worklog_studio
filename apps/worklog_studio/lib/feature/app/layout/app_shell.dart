@@ -366,6 +366,7 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
                   color: isOpen
                       ? palette.background.surfaceMuted
                       : Colors.transparent,
+                  border: Border.all(color: Colors.transparent),
                 ),
                 child: Row(
                   children: [
@@ -514,6 +515,7 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
                   color: isOpen
                       ? palette.background.surfaceMuted
                       : Colors.transparent,
+                  border: Border.all(color: Colors.transparent),
                 ),
                 child: Row(
                   children: [
