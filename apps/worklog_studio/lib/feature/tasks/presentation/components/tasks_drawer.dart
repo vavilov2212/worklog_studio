@@ -275,26 +275,30 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                       onTap: () => setState(
                                         () => _editingField = 'project',
                                       ),
-                                      editWidget: TapRegion(
-                                        onTapOutside: (_) {
-                                          setState(() => _editingField = null);
-                                        },
-                                        child: Select<String>(
-                                          value: _selectedProjectId,
-                                          placeholder: 'Select Project',
-                                          onChanged: (value) {
-                                            setState(() {
-                                              _selectedProjectId = value;
-                                              _editingField = null;
-                                            });
-                                          },
-                                          options: state.projects.map((p) {
-                                            return SelectOption(
-                                              value: p.id,
-                                              label: p.name,
+                                      editWidget: Select<String>(
+                                        autoOpen: true,
+                                        onOpenChange: (isOpen) {
+                                          if (!isOpen &&
+                                              _editingField == 'project') {
+                                            setState(
+                                              () => _editingField = null,
                                             );
-                                          }).toList(),
-                                        ),
+                                          }
+                                        },
+                                        value: _selectedProjectId,
+                                        placeholder: 'Select Project',
+                                        onChanged: (value) {
+                                          setState(() {
+                                            _selectedProjectId = value;
+                                            _editingField = null;
+                                          });
+                                        },
+                                        options: state.projects.map((p) {
+                                          return SelectOption(
+                                            value: p.id,
+                                            label: p.name,
+                                          );
+                                        }).toList(),
                                       ),
                                     );
                                   },

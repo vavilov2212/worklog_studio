@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:vector_svg/extension/vector_graphic_extention.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 class InlineField extends StatefulWidget {
@@ -87,22 +86,24 @@ class _InlineFieldState extends State<InlineField> {
                       child: Row(
                         spacing: theme.spacings.s8,
                         children: [
-                          Text(
-                            widget.value.isEmpty
-                                ? widget.placeholder
-                                : widget.value,
-                            style: theme.commonTextStyles.body.copyWith(
-                              color: widget.value.isEmpty
-                                  ? palette.text.muted
-                                  : palette.text.primary,
-                              fontStyle: widget.value.isEmpty
-                                  ? FontStyle.italic
-                                  : null,
+                          Expanded(
+                            child: Text(
+                              widget.value.isEmpty
+                                  ? widget.placeholder
+                                  : widget.value,
+                              style: theme.commonTextStyles.body.copyWith(
+                                color: widget.value.isEmpty
+                                    ? palette.text.muted
+                                    : palette.text.primary,
+                                fontStyle: widget.value.isEmpty
+                                    ? FontStyle.italic
+                                    : null,
+                              ),
+                              maxLines: widget.isTextArea ? null : 1,
+                              overflow: widget.isTextArea
+                                  ? null
+                                  : TextOverflow.ellipsis,
                             ),
-                            maxLines: widget.isTextArea ? null : 1,
-                            overflow: widget.isTextArea
-                                ? null
-                                : TextOverflow.ellipsis,
                           ),
                           _isHovered
                               ? Icon(

@@ -263,29 +263,28 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                               isEditing: _editingField == 'project',
                               onTap: () =>
                                   setState(() => _editingField = 'project'),
-                              editWidget: Focus(
-                                onFocusChange: (hasFocus) {
-                                  if (!hasFocus) {
+                              editWidget: Select<String>(
+                                autoOpen: true,
+                                onOpenChange: (isOpen) {
+                                  if (!isOpen && _editingField == 'project') {
                                     setState(() => _editingField = null);
                                   }
                                 },
-                                child: Select<String>(
-                                  value: _selectedProjectId,
-                                  placeholder: 'Select Project',
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _selectedProjectId = value;
-                                      _selectedTaskId = null;
-                                      _editingField = null;
-                                    });
-                                  },
-                                  options: state.projects.map((p) {
-                                    return SelectOption(
-                                      value: p.id,
-                                      label: p.name,
-                                    );
-                                  }).toList(),
-                                ),
+                                value: _selectedProjectId,
+                                placeholder: 'Select Project',
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedProjectId = value;
+                                    _selectedTaskId = null;
+                                    _editingField = null;
+                                  });
+                                },
+                                options: state.projects.map((p) {
+                                  return SelectOption(
+                                    value: p.id,
+                                    label: p.name,
+                                  );
+                                }).toList(),
                               ),
                             );
                           },
@@ -305,34 +304,32 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                               isEditing: _editingField == 'task',
                               onTap: () =>
                                   setState(() => _editingField = 'task'),
-                              editWidget: Focus(
-                                onFocusChange: (hasFocus) {
-                                  if (!hasFocus) {
+                              editWidget: Select<String>(
+                                autoOpen: true,
+                                onOpenChange: (isOpen) {
+                                  if (!isOpen && _editingField == 'task') {
                                     setState(() => _editingField = null);
                                   }
                                 },
-                                child: Select<String>(
-                                  value: _selectedTaskId,
-                                  placeholder: 'Select Task',
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _selectedTaskId = value;
-                                      _editingField = null;
-                                    });
-                                  },
-                                  options: state.tasks
-                                      .where(
-                                        (t) =>
-                                            t.projectId == _selectedProjectId,
-                                      )
-                                      .map((t) {
-                                        return SelectOption(
-                                          value: t.id,
-                                          label: t.title,
-                                        );
-                                      })
-                                      .toList(),
-                                ),
+                                value: _selectedTaskId,
+                                placeholder: 'Select Task',
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedTaskId = value;
+                                    _editingField = null;
+                                  });
+                                },
+                                options: state.tasks
+                                    .where(
+                                      (t) => t.projectId == _selectedProjectId,
+                                    )
+                                    .map((t) {
+                                      return SelectOption(
+                                        value: t.id,
+                                        label: t.title,
+                                      );
+                                    })
+                                    .toList(),
                               ),
                             );
                           },
