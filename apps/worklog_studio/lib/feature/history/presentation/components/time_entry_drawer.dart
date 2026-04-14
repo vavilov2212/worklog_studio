@@ -2,7 +2,9 @@ import 'package:flutter/material.dart' hide DrawerHeader;
 import 'package:provider/provider.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_content.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_header.dart';
+import 'package:worklog_studio/feature/common/presentation/components/inline_field_controller.dart';
 import 'package:worklog_studio/feature/common/presentation/resizable_drawer.dart';
+import 'package:worklog_studio/feature/common/presentation/components/inline_field.dart';
 import 'package:worklog_studio/state/time_tracker_state.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
@@ -34,6 +36,12 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
   late TextEditingController _commentController;
   late TextEditingController _startTimeController;
   late TextEditingController _endTimeController;
+  final InlineFieldController _projectFieldController = InlineFieldController();
+  final InlineFieldController _taskFieldController = InlineFieldController();
+  final InlineFieldController _commentFieldController = InlineFieldController();
+  final InlineFieldController _startTimeFieldController =
+      InlineFieldController();
+  final InlineFieldController _endTimeFieldController = InlineFieldController();
   String? _selectedProjectId;
   String? _selectedTaskId;
 
@@ -72,6 +80,11 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
     _commentController.dispose();
     _startTimeController.dispose();
     _endTimeController.dispose();
+    _projectFieldController.dispose();
+    _taskFieldController.dispose();
+    _commentFieldController.dispose();
+    _startTimeFieldController.dispose();
+    _endTimeFieldController.dispose();
     super.dispose();
   }
 
@@ -98,7 +111,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
       status: entry.status,
     );
 
-    if (widget.isNew) {
+    if (_isNew) {
       await state.createEntry(updatedEntry);
     } else {
       await state.updateEntry(updatedEntry);
@@ -224,59 +237,113 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                     meta: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (widget.resolvedEntry!.isRunning)
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: theme.spacings.s12,
-                              vertical: theme.spacings.s4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: palette.accent.primaryMuted,
-                              borderRadius: theme.radiuses.pill.circular,
-                            ),
-                            child: Text(
-                              'ACTIVE LOG',
-                              style: theme.commonTextStyles.caption3Bold
-                                  .copyWith(color: palette.accent.primary),
-                            ),
-                          )
-                        else
-                          const SizedBox.shrink(),
-                        if (widget.resolvedEntry!.isRunning)
-                          SizedBox(height: theme.spacings.s24),
+                        if (!_isNew) ...[
+                          Row(
+                            children: [
+                              StatusBadge(
+                                status: widget.resolvedEntry!.isRunning
+                                    ? BadgeStatus.inProgress
+                                    : BadgeStatus.ready,
+                                label: getStatusText(
+                                  widget.resolvedEntry!.entry.status,
+                                ),
+                              ),
+                              SizedBox(width: theme.spacings.s12),
+                              Text(
+                                'Created ${_formatTime(widget.resolvedEntry!.entry.startAt)}',
+                                style: theme.commonTextStyles.body2.copyWith(
+                                  color: palette.text.secondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: theme.spacings.s32),
+                        ],
 
-                        Select<String>(
-                          value: _selectedProjectId,
-                          placeholder: 'Select Project',
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedProjectId = value;
-                              _selectedTaskId =
-                                  null; // Reset task when project changes
-                            });
+                        // Project Select
+                        Consumer<ProjectTaskState>(
+                          builder: (context, state, child) {
+                            final selectedProject = state.projects
+                                .where((p) => p.id == _selectedProjectId)
+                                .firstOrNull;
+
+                            return InlineField(
+                              label: 'PROJECT',
+                              value: selectedProject?.name ?? '',
+                              placeholder: 'Select Project',
+                              controller: _projectFieldController,
+                              editWidget: Select<String>(
+                                autoOpen: true,
+                                tapRegionGroupId:
+                                    _projectFieldController.tapRegionGroupId,
+                                onOpenChange: (isOpen) {
+                                  if (!isOpen) {
+                                    _projectFieldController.handleEditorClose();
+                                  }
+                                },
+                                value: _selectedProjectId,
+                                placeholder: 'Select Project',
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedProjectId = value;
+                                    _selectedTaskId = null;
+                                  });
+                                  _projectFieldController.handleEditorCommit();
+                                },
+                                options: state.projects.map((p) {
+                                  return SelectOption(
+                                    value: p.id,
+                                    label: p.name,
+                                  );
+                                }).toList(),
+                              ),
+                            );
                           },
-                          options: projectTaskState.projects.map((p) {
-                            return SelectOption(value: p.id, label: p.name);
-                          }).toList(),
                         ),
                         SizedBox(height: theme.spacings.s16),
-                        Select<String>(
-                          value: _selectedTaskId,
-                          placeholder: 'Select Task',
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedTaskId = value;
-                            });
+                        // Task Select
+                        Consumer<ProjectTaskState>(
+                          builder: (context, state, child) {
+                            final selectedTask = state.tasks
+                                .where((t) => t.id == _selectedTaskId)
+                                .firstOrNull;
+
+                            return InlineField(
+                              label: 'TASK',
+                              value: selectedTask?.title ?? '',
+                              placeholder: 'Select Task',
+                              controller: _taskFieldController,
+                              editWidget: Select<String>(
+                                autoOpen: true,
+                                tapRegionGroupId:
+                                    _taskFieldController.tapRegionGroupId,
+                                onOpenChange: (isOpen) {
+                                  if (!isOpen) {
+                                    _taskFieldController.handleEditorClose();
+                                  }
+                                },
+                                value: _selectedTaskId,
+                                placeholder: 'Select Task',
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedTaskId = value;
+                                  });
+                                  _taskFieldController.handleEditorCommit();
+                                },
+                                options: state.tasks
+                                    .where(
+                                      (t) => t.projectId == _selectedProjectId,
+                                    )
+                                    .map((t) {
+                                      return SelectOption(
+                                        value: t.id,
+                                        label: t.title,
+                                      );
+                                    })
+                                    .toList(),
+                              ),
+                            );
                           },
-                          options: projectTaskState.tasks
-                              .where((t) => t.projectId == _selectedProjectId)
-                              .map((t) {
-                                return SelectOption(
-                                  value: t.id,
-                                  label: t.title,
-                                );
-                              })
-                              .toList(),
                         ),
                       ],
                     ),
@@ -288,6 +355,43 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Timeline
+                          Row(
+                            children: [
+                              Expanded(
+                                child: InlineField(
+                                  label: 'START TIME',
+                                  value: _startTimeController.text,
+                                  placeholder: 'HH:mm',
+                                  controller: _startTimeFieldController,
+                                  textController: _startTimeController,
+                                  editWidget: PrimaryInput(
+                                    label: null,
+                                    controller: _startTimeController,
+                                    hintText: 'HH:mm',
+                                    autofocus: true,
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: theme.spacings.s16),
+                              Expanded(
+                                child: InlineField(
+                                  label: 'END TIME',
+                                  value: _endTimeController.text,
+                                  placeholder: 'HH:mm',
+                                  controller: _endTimeFieldController,
+                                  textController: _endTimeController,
+                                  editWidget: PrimaryInput(
+                                    label: null,
+                                    controller: _endTimeController,
+                                    hintText: 'HH:mm',
+                                    autofocus: true,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: theme.spacings.s32),
                           // Metrics Grid
                           Row(
                             children: [
@@ -360,62 +464,20 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                           ),
                           SizedBox(height: theme.spacings.s32),
 
-                          // Timeline
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'START TIME',
-                                      style: theme.commonTextStyles.caption3Bold
-                                          .copyWith(
-                                            color: palette.text.muted,
-                                            letterSpacing: 1.0,
-                                          ),
-                                    ),
-                                    SizedBox(height: theme.spacings.s4),
-                                    PrimaryInput(
-                                      label: 'START TIME',
-                                      controller: _startTimeController,
-                                      hintText: 'HH:mm',
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              SizedBox(width: theme.spacings.s16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'END TIME',
-                                      style: theme.commonTextStyles.caption3Bold
-                                          .copyWith(
-                                            color: palette.text.muted,
-                                            letterSpacing: 1.0,
-                                          ),
-                                    ),
-                                    SizedBox(height: theme.spacings.s4),
-                                    PrimaryInput(
-                                      label: 'START TIME',
-                                      controller: _endTimeController,
-                                      hintText: 'HH:mm',
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: theme.spacings.s32),
-
                           // Comments
-                          TextArea(
+                          InlineField(
                             label: 'COMMENTS',
-                            hintText: 'Add a comment...',
-                            controller: _commentController,
-                            maxLines: 4,
+                            value: _commentController.text,
+                            placeholder: 'Add a comment...',
+                            controller: _commentFieldController,
+                            textController: _commentController,
+                            isTextArea: true,
+                            editWidget: TextArea(
+                              label: null,
+                              hintText: 'Add a comment...',
+                              controller: _commentController,
+                              autofocus: true,
+                            ),
                           ),
                           SizedBox(height: theme.spacings.s32),
 
@@ -452,6 +514,15 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
               ],
             ),
     );
+  }
+
+  String getStatusText(TimeEntryStatus status) {
+    switch (status) {
+      case TimeEntryStatus.running:
+        return 'RUNNING';
+      case TimeEntryStatus.stopped:
+        return 'STOPPED';
+    }
   }
 
   String _formatDuration(Duration duration) {

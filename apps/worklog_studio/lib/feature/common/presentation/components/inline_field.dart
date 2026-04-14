@@ -1,0 +1,198 @@
+import 'package:flutter/material.dart';
+import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
+import 'inline_field_controller.dart';
+
+class InlineField extends StatefulWidget {
+  final String label;
+  final String value;
+  final String placeholder;
+  final Widget editWidget;
+  final bool isTextArea;
+  final InlineFieldController controller;
+  final TextEditingController? textController;
+
+  const InlineField({
+    super.key,
+    required this.label,
+    required this.value,
+    this.placeholder = 'Empty',
+    required this.editWidget,
+    this.isTextArea = false,
+    required this.controller,
+    this.textController,
+  });
+
+  @override
+  State<InlineField> createState() => _InlineFieldState();
+}
+
+class _InlineFieldState extends State<InlineField> {
+  bool _isHovered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_onControllerChange);
+    widget.textController?.addListener(_onTextControllerChange);
+  }
+
+  void _onTextControllerChange() {
+    setState(() {});
+  }
+
+  String get _displayValue {
+    if (widget.textController != null) {
+      return widget.textController!.text;
+    }
+    if (_currentIsEditing) {
+      return widget.controller.currentValue ?? widget.value;
+    }
+    return widget.controller.currentValue ?? widget.value;
+  }
+
+  @override
+  void didUpdateWidget(InlineField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.controller != oldWidget.controller) {
+      oldWidget.controller.removeListener(_onControllerChange);
+      widget.controller.addListener(_onControllerChange);
+    }
+    if (widget.textController != oldWidget.textController) {
+      oldWidget.textController?.removeListener(_onTextControllerChange);
+      widget.textController?.addListener(_onTextControllerChange);
+    }
+    if (widget.value != oldWidget.value) {
+      widget.controller.resetValue();
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onControllerChange);
+    widget.textController?.removeListener(_onTextControllerChange);
+    super.dispose();
+  }
+
+  void _onControllerChange() {
+    setState(() {});
+  }
+
+  bool get _currentIsEditing => widget.controller.isEditing;
+
+  void _handleTap() {
+    widget.controller.enterEditMode(widget.value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    final palette = theme.colorsPalette;
+
+    Widget content = MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: _handleTap,
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+
+          children: [
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: theme.spacings.s0),
+              child: Text(
+                widget.label,
+                style: theme.commonTextStyles.captionSemiBold.copyWith(
+                  color: _isHovered || _currentIsEditing
+                      ? palette.text.primary
+                      : palette.text.secondary2,
+                ),
+              ),
+            ),
+            SizedBox(height: theme.spacings.s8),
+            if (widget.isTextArea && _currentIsEditing)
+              widget.editWidget
+            else
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  // View Mode (Base Layer)
+                  // Always rendered with Visibility(maintainSize: true) to ensure layout stability
+                  Visibility(
+                    visible: !_currentIsEditing,
+                    maintainSize: true,
+                    maintainAnimation: true,
+                    maintainState: true,
+                    child: Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: theme.spacings.s12,
+                        vertical: theme.spacings.s12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _isHovered
+                            ? palette.background.surfaceMuted
+                            : Colors.transparent,
+                        borderRadius: theme.radiuses.md.circular,
+                        // Add transparent border to match edit mode's border size
+                        border: Border.all(color: Colors.transparent),
+                      ),
+                      child: Row(
+                        spacing: theme.spacings.s8,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _displayValue.isEmpty
+                                  ? widget.placeholder
+                                  : _displayValue,
+                              style: theme.commonTextStyles.body.copyWith(
+                                color: _displayValue.isEmpty
+                                    ? palette.text.muted
+                                    : palette.text.primary,
+                                fontStyle: _displayValue.isEmpty
+                                    ? FontStyle.italic
+                                    : null,
+                              ),
+                              maxLines: widget.isTextArea ? null : 1,
+                              overflow: widget.isTextArea
+                                  ? null
+                                  : TextOverflow.ellipsis,
+                            ),
+                          ),
+                          _isHovered
+                              ? Icon(
+                                  Icons.edit_sharp,
+                                  color: _isHovered
+                                      ? palette.text.secondary
+                                      : palette.text.muted,
+                                  size: 16.0,
+                                )
+                              : SizedBox.shrink(),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // Edit Mode (Overlay Layer) - Only for non-TextArea fields
+                  if (_currentIsEditing && !widget.isTextArea)
+                    Positioned.fill(child: widget.editWidget),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+
+    if (_currentIsEditing) {
+      return TapRegion(
+        groupId: widget.controller.tapRegionGroupId,
+        onTapOutside: (_) {
+          widget.controller.handleEditorCommit();
+        },
+        child: content,
+      );
+    }
+
+    return content;
+  }
+}

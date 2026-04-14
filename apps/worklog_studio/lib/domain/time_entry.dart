@@ -43,7 +43,7 @@ class TimeEntry {
     TimeEntryStatus? status,
   }) {
     return TimeEntry(
-      id: this.id,
+      id: id == null || id.isEmpty == true ? this.id : id,
       projectId: projectId ?? this.projectId,
       taskId: taskId ?? this.taskId,
       comment: comment ?? this.comment,

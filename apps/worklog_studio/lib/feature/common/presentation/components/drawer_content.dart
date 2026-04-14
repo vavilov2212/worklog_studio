@@ -23,10 +23,10 @@ class DrawerContent extends StatelessWidget {
         if (meta != null) ...[
           Padding(
             padding: EdgeInsets.fromLTRB(
-              theme.spacings.s32,
               theme.spacings.s24,
-              theme.spacings.s32,
-              0,
+              theme.spacings.s12,
+              theme.spacings.s24,
+              theme.spacings.s0,
             ),
             child: meta!,
           ),

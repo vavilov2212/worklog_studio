@@ -14,6 +14,7 @@ class TextArea extends StatefulWidget {
   final int maxLength;
   final int? maxLines;
   final bool showCounter;
+  final ValueChanged<String>? onChanged;
 
   const TextArea({
     required this.hintText,
@@ -26,6 +27,7 @@ class TextArea extends StatefulWidget {
     this.keyboardType = TextInputType.text,
     this.maxLines = 5,
     this.maxLength = 3000,
+    this.onChanged,
     super.key,
   });
 
@@ -37,6 +39,21 @@ class _TextAreaState extends State<TextArea> {
   TextEditingController get controller => widget.controller;
   ColorsPalette get palette => context.theme.colorsPalette;
   bool _hasFocus = false;
+  double? _manualHeight;
+  bool _isResizing = false;
+  late final FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode = FocusNode();
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
 
   Color get _borderColor {
     if (!widget.enabled) return palette.border.primary;
@@ -61,56 +78,126 @@ class _TextAreaState extends State<TextArea> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.theme;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
-      spacing: context.theme.spacings.s8,
+      spacing: theme.spacings.s8,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (widget.label != null)
           Text(
             widget.label!,
-            style: context.theme.commonTextStyles.caption.copyWith(
-              color: _labelColor,
-            ),
+            style: theme.commonTextStyles.caption.copyWith(color: _labelColor),
           ),
         Focus(
-          onFocusChange: (focus) => setState(() => _hasFocus = focus),
-          child: AnimatedContainer(
-            duration: kThemeAnimationDuration,
-            decoration: BoxDecoration(
-              color: palette.background.surface,
-              borderRadius: context.theme.radiuses.sm.circular,
-              border: Border.all(color: _borderColor),
-            ),
-            padding: EdgeInsets.all(context.theme.spacings.s16),
-            child: TextField(
-              autofocus: widget.autofocus,
-              controller: controller,
-              enabled: widget.enabled,
-              keyboardType: widget.keyboardType,
-              cursorColor: palette.text.primary,
-              decoration: InputDecoration(
-                isDense: true,
-                border: InputBorder.none,
-                hintText: widget.hintText,
-                hintStyle: context.theme.commonTextStyles.body.copyWith(
-                  color: palette.text.muted,
-                ),
-                contentPadding: EdgeInsets.zero,
+          onFocusChange: (focus) {
+            if (_isResizing) return;
+            setState(() => _hasFocus = focus);
+          },
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => _focusNode.requestFocus(),
+            child: Container(
+              constraints: BoxConstraints(
+                minHeight: theme.spacings.s48,
+                maxHeight: 500,
               ),
-              maxLines: widget.maxLines,
-              maxLength: widget.maxLength,
-              buildCounter:
-                  (
-                    _, {
-                    required currentLength,
-                    required isFocused,
-                    required maxLength,
-                  }) => const SizedBox.shrink(),
-              style: context.theme.commonTextStyles.body.copyWith(
-                color: _textColor,
+              height: _manualHeight,
+              decoration: BoxDecoration(
+                color: palette.background.surface,
+                borderRadius: theme.radiuses.sm.circular,
+                border: Border.all(color: _borderColor),
               ),
-              onChanged: (_) => setState(() {}),
+              child: Stack(
+                children: [
+                  Padding(
+                    padding: EdgeInsets.all(theme.spacings.s16),
+                    child: TextField(
+                      autofocus: widget.autofocus,
+                      controller: controller,
+                      focusNode: _focusNode,
+                      enabled: widget.enabled,
+                      keyboardType: widget.keyboardType,
+                      cursorColor: palette.text.primary,
+                      decoration: InputDecoration(
+                        isDense: true,
+                        border: InputBorder.none,
+                        hintText: widget.hintText,
+                        hintStyle: theme.commonTextStyles.body.copyWith(
+                          color: palette.text.muted,
+                        ),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      maxLines: null, // Auto-expand
+                      maxLength: widget.maxLength,
+                      buildCounter:
+                          (
+                            _, {
+                            required currentLength,
+                            required isFocused,
+                            required maxLength,
+                          }) => const SizedBox.shrink(),
+                      style: theme.commonTextStyles.body.copyWith(
+                        color: _textColor,
+                      ),
+                      onChanged: (val) {
+                        if (widget.onChanged != null) {
+                          widget.onChanged!(val);
+                        }
+                      },
+                    ),
+                  ),
+                  // Resize Handle (Bottom Edge)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    height: 12,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTapDown: (_) {
+                        // Request focus immediately on tap down to prevent blur
+                        _focusNode.requestFocus();
+                      },
+                      onVerticalDragStart: (_) {
+                        setState(() => _isResizing = true);
+                        _focusNode.requestFocus();
+                      },
+                      onVerticalDragUpdate: (details) {
+                        setState(() {
+                          final currentHeight =
+                              _manualHeight ??
+                              context.size?.height ??
+                              theme.spacings.s48;
+                          _manualHeight = (currentHeight + details.delta.dy)
+                              .clamp(theme.spacings.s48, 500.0);
+                        });
+                      },
+                      onVerticalDragEnd: (_) {
+                        setState(() => _isResizing = false);
+                      },
+                      child: MouseRegion(
+                        cursor: SystemMouseCursors.resizeUpDown,
+                        child: Stack(
+                          alignment: Alignment.bottomRight,
+                          children: [
+                            // Visual indicator
+                            Padding(
+                              padding: const EdgeInsets.all(2),
+                              child: Icon(
+                                Icons.drag_handle,
+                                size: 12,
+                                color: palette.text.muted.withOpacity(0.5),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -119,7 +206,7 @@ class _TextAreaState extends State<TextArea> {
             alignment: Alignment.centerRight,
             child: Text(
               '${controller.text.length}/${widget.maxLength}',
-              style: context.theme.commonTextStyles.caption2.copyWith(
+              style: theme.commonTextStyles.caption2.copyWith(
                 color: _counterColor,
               ),
             ),

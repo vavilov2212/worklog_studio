@@ -44,6 +44,10 @@ class Select<T> extends StatefulWidget {
   )?
   triggerBuilder;
 
+  final bool autoOpen;
+  final ValueChanged<bool>? onOpenChange;
+  final Object? tapRegionGroupId;
+
   const Select({
     super.key,
     this.value,
@@ -59,6 +63,9 @@ class Select<T> extends StatefulWidget {
     this.mode = SelectMode.single,
     this.matchTriggerWidth = true,
     this.triggerBuilder,
+    this.autoOpen = false,
+    this.onOpenChange,
+    this.tapRegionGroupId,
   }) : assert(
          !(value != null && defaultValue != null),
          'Select cannot be both controlled and uncontrolled.',
@@ -95,11 +102,36 @@ class _SelectState<T> extends State<Select<T>> {
         _searchQuery = _searchController.text;
       });
     });
+
+    _controller.addListener(_handleOpenChange);
+
+    if (widget.autoOpen) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _controller.open();
+        }
+      });
+    }
+  }
+
+  void _handleOpenChange() {
+    widget.onOpenChange?.call(_controller.isOpen);
   }
 
   @override
   void didUpdateWidget(covariant Select<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.controller != widget.controller) {
+      if (oldWidget.controller == null) {
+        _controller.removeListener(_handleOpenChange);
+        _controller.dispose();
+      } else {
+        oldWidget.controller!.removeListener(_handleOpenChange);
+      }
+      _controller = widget.controller ?? ComboboxController();
+      _controller.addListener(_handleOpenChange);
+    }
 
     if (!_isControlled && oldWidget.defaultValue != widget.defaultValue) {
       _internalValue = widget.defaultValue;
@@ -108,6 +140,7 @@ class _SelectState<T> extends State<Select<T>> {
 
   @override
   void dispose() {
+    _controller.removeListener(_handleOpenChange);
     if (widget.controller == null) {
       _controller.dispose();
     }
@@ -148,6 +181,7 @@ class _SelectState<T> extends State<Select<T>> {
       controller: _controller,
       enabled: widget.enabled,
       matchTriggerWidth: widget.matchTriggerWidth,
+      tapRegionGroupId: widget.tapRegionGroupId,
       triggerBuilder: (context, open, isOpen) {
         if (widget.triggerBuilder != null) {
           return widget.triggerBuilder!(context, selectedOption, isOpen);

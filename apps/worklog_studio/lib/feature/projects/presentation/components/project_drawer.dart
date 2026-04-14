@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart' hide DrawerHeader;
 import 'package:provider/provider.dart';
 import 'package:worklog_studio/domain/project.dart';
+import 'package:worklog_studio/feature/common/presentation/components/inline_field_controller.dart';
 import 'package:worklog_studio/feature/common/presentation/resizable_drawer.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_content.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_header.dart';
+import 'package:worklog_studio/feature/common/presentation/components/inline_field.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
@@ -12,6 +14,7 @@ class ProjectDrawer extends StatefulWidget {
   final bool isOpen;
   final VoidCallback onClose;
   final DrawerMode mode;
+  final bool isNew;
 
   const ProjectDrawer({
     super.key,
@@ -19,6 +22,7 @@ class ProjectDrawer extends StatefulWidget {
     required this.isOpen,
     required this.onClose,
     this.mode = DrawerMode.push,
+    required this.isNew,
   });
 
   @override
@@ -29,6 +33,9 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
   bool _isConfirmingDelete = false;
   late TextEditingController _nameController;
   late TextEditingController _descriptionController;
+  final InlineFieldController _nameFieldController = InlineFieldController();
+  final InlineFieldController _descriptionFieldController =
+      InlineFieldController();
 
   @override
   void initState() {
@@ -58,10 +65,12 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
+    _nameFieldController.dispose();
+    _descriptionFieldController.dispose();
     super.dispose();
   }
 
-  bool get _isNew => widget.project?.id == 'new';
+  bool get _isNew => widget.isNew;
 
   void _handleSave() async {
     final state = context.read<ProjectTaskState>();
@@ -90,7 +99,7 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
     final theme = context.theme;
     final palette = theme.colorsPalette;
     final projectTaskState = context.watch<ProjectTaskState>();
-    final projectTasks = widget.project != null
+    final projectTasks = widget.project != null && !_isNew
         ? projectTaskState.tasks
               .where((t) => t.projectId == widget.project!.id)
               .toList()
@@ -202,10 +211,19 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
                           ),
                           SizedBox(height: theme.spacings.s24),
                         ],
-                        PrimaryInput(
+                        // Name Input
+                        InlineField(
                           label: 'PROJECT NAME',
-                          hintText: 'Enter project name...',
-                          controller: _nameController,
+                          value: _nameController.text,
+                          placeholder: 'Enter project name...',
+                          controller: _nameFieldController,
+                          textController: _nameController,
+                          editWidget: PrimaryInput(
+                            label: null,
+                            hintText: 'Enter project name...',
+                            controller: _nameController,
+                            autofocus: true,
+                          ),
                         ),
                       ],
                     ),
@@ -217,11 +235,20 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          TextArea(
+                          // Description
+                          InlineField(
                             label: 'DESCRIPTION',
-                            hintText: 'Add a description...',
-                            controller: _descriptionController,
-                            maxLines: 4,
+                            value: _descriptionController.text,
+                            placeholder: 'Add a description...',
+                            controller: _descriptionFieldController,
+                            textController: _descriptionController,
+                            isTextArea: true,
+                            editWidget: TextArea(
+                              label: null,
+                              hintText: 'Add a description...',
+                              controller: _descriptionController,
+                              autofocus: true,
+                            ),
                           ),
                           SizedBox(height: theme.spacings.s32),
                           if (!_isNew) ...[

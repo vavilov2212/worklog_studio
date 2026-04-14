@@ -310,7 +310,7 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
       children: [
         Text(
           'PROJECT',
-          style: theme.commonTextStyles.caption3Bold.copyWith(
+          style: theme.commonTextStyles.caption.copyWith(
             color: palette.text.muted,
           ),
         ),
@@ -354,60 +354,67 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
             }
           },
           triggerBuilder: (context, selectedOption, isOpen) {
-            return Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: theme.spacings.s12,
-                vertical: theme.spacings.s12,
-              ),
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: isOpen ? palette.border.focus : palette.border.primary,
+            return MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: theme.spacings.s12,
+                  vertical: theme.spacings.s12,
                 ),
-                borderRadius: theme.radiuses.md.circular,
-                color: palette.background.surface,
-              ),
-              child: Row(
-                children: [
-                  if (selectedOption == null ||
-                      selectedOption.value == 'create_new')
+                decoration: BoxDecoration(
+                  borderRadius: theme.radiuses.md.circular,
+                  color: isOpen
+                      ? palette.background.surfaceMuted
+                      : Colors.transparent,
+                  border: Border.all(color: Colors.transparent),
+                ),
+                child: Row(
+                  children: [
+                    if (selectedOption == null ||
+                        selectedOption.value == 'create_new')
+                      Icon(
+                        Icons.add_circle_outline,
+                        size: 16,
+                        color: palette.text.muted,
+                      )
+                    else
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: palette.accent.primary,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    SizedBox(width: theme.spacings.s8),
+                    Expanded(
+                      child: Text(
+                        selectedOption?.label ?? 'Select Project',
+                        style: theme.commonTextStyles.body.copyWith(
+                          color:
+                              selectedOption != null &&
+                                  selectedOption.value != 'create_new'
+                              ? (isRunning
+                                    ? palette.accent.primary
+                                    : palette.text.primary)
+                              : palette.text.muted,
+                          fontWeight:
+                              selectedOption != null &&
+                                  selectedOption.value != 'create_new'
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                     Icon(
-                      Icons.add_circle_outline,
-                      size: 16,
+                      Icons.unfold_more,
+                      size: 18,
                       color: palette.text.muted,
-                    )
-                  else
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: palette.accent.primary,
-                        shape: BoxShape.circle,
-                      ),
                     ),
-                  SizedBox(width: theme.spacings.s8),
-                  Expanded(
-                    child: Text(
-                      selectedOption?.label ?? 'Select Project',
-                      style: theme.commonTextStyles.body.copyWith(
-                        color:
-                            selectedOption != null &&
-                                selectedOption.value != 'create_new'
-                            ? (isRunning
-                                  ? palette.accent.primary
-                                  : palette.text.primary)
-                            : palette.text.muted,
-                        fontWeight:
-                            selectedOption != null &&
-                                selectedOption.value != 'create_new'
-                            ? FontWeight.w600
-                            : FontWeight.normal,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Icon(Icons.unfold_more, size: 18, color: palette.text.muted),
-                ],
+                  ],
+                ),
               ),
             );
           },
@@ -442,7 +449,7 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
       children: [
         Text(
           'TASK',
-          style: theme.commonTextStyles.caption3Bold.copyWith(
+          style: theme.commonTextStyles.caption.copyWith(
             color: palette.text.muted,
           ),
         ),
@@ -496,41 +503,48 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
             }
           },
           triggerBuilder: (context, selectedOption, isOpen) {
-            return Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: theme.spacings.s12,
-                vertical: theme.spacings.s12,
-              ),
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: isOpen ? palette.border.focus : palette.border.primary,
+            return MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: theme.spacings.s12,
+                  vertical: theme.spacings.s12,
                 ),
-                borderRadius: theme.radiuses.md.circular,
-                color: palette.background.surface,
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      selectedOption?.label ?? 'Select Task',
-                      style: theme.commonTextStyles.body.copyWith(
-                        color:
-                            selectedOption != null &&
-                                selectedOption.value != 'create_new'
-                            ? palette.text.primary
-                            : palette.text.muted,
-                        fontWeight:
-                            selectedOption != null &&
-                                selectedOption.value != 'create_new'
-                            ? FontWeight.w600
-                            : FontWeight.normal,
+                decoration: BoxDecoration(
+                  borderRadius: theme.radiuses.md.circular,
+                  color: isOpen
+                      ? palette.background.surfaceMuted
+                      : Colors.transparent,
+                  border: Border.all(color: Colors.transparent),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        selectedOption?.label ?? 'Select Task',
+                        style: theme.commonTextStyles.body.copyWith(
+                          color:
+                              selectedOption != null &&
+                                  selectedOption.value != 'create_new'
+                              ? palette.text.primary
+                              : palette.text.muted,
+                          fontWeight:
+                              selectedOption != null &&
+                                  selectedOption.value != 'create_new'
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  Icon(Icons.unfold_more, size: 18, color: palette.text.muted),
-                ],
+                    Icon(
+                      Icons.unfold_more,
+                      size: 18,
+                      color: palette.text.muted,
+                    ),
+                  ],
+                ),
               ),
             );
           },
@@ -645,7 +659,7 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
       children: [
         Text(
           'COMMENT',
-          style: theme.commonTextStyles.caption3Bold.copyWith(
+          style: theme.commonTextStyles.caption.copyWith(
             color: palette.text.muted,
           ),
         ),

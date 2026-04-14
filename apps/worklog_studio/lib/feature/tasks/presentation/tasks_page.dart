@@ -29,7 +29,7 @@ class _TasksScreenState extends State<TasksScreen> {
   void _handleCreateTask() {
     setState(() {
       selectedTask = Task(
-        id: 'new',
+        id: '',
         projectId: '',
         title: '',
         description: '',
@@ -64,6 +64,7 @@ class _TasksScreenState extends State<TasksScreen> {
           task: selectedTask,
           isOpen: selectedTask != null,
           onClose: _closePanel,
+          isNew: selectedTask != null && selectedTask!.id.isEmpty,
         ),
       ],
     );

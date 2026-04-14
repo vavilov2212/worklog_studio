@@ -15,6 +15,7 @@ class PopoverPrimitive extends StatefulWidget {
   matchTriggerWidth; // Для Select/Combobox (ширина списка = ширине инпута)
   final Alignment targetAnchor;
   final Alignment followerAnchor;
+  final Object? tapRegionGroupId;
 
   const PopoverPrimitive({
     Key? key,
@@ -27,6 +28,7 @@ class PopoverPrimitive extends StatefulWidget {
     this.matchTriggerWidth = false,
     this.targetAnchor = Alignment.bottomLeft,
     this.followerAnchor = Alignment.topLeft,
+    this.tapRegionGroupId,
   }) : super(key: key);
 
   @override
@@ -37,12 +39,27 @@ class _PopoverPrimitiveState extends State<PopoverPrimitive> {
   final LayerLink _layerLink = LayerLink();
   OverlayEntry? _overlayEntry;
   late PopoverController _controller;
+  late Object _internalTapRegionGroupId;
 
   @override
   void initState() {
     super.initState();
+    _internalTapRegionGroupId = widget.tapRegionGroupId ?? Object();
     _controller = widget.controller;
     _controller.addListener(_onChange);
+  }
+
+  @override
+  void didUpdateWidget(PopoverPrimitive oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.controller != oldWidget.controller) {
+      _controller.removeListener(_onChange);
+      _controller = widget.controller;
+      _controller.addListener(_onChange);
+    }
+    if (widget.tapRegionGroupId != oldWidget.tapRegionGroupId) {
+      _internalTapRegionGroupId = widget.tapRegionGroupId ?? Object();
+    }
   }
 
   @override
@@ -67,15 +84,7 @@ class _PopoverPrimitiveState extends State<PopoverPrimitive> {
       builder: (context) {
         return Stack(
           children: [
-            // 1. Невидимый слой-перехватчик кликов (для закрытия)
-            Positioned.fill(
-              child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onTap: widget.onRequestClose ?? _controller.hide,
-                child: Container(color: Colors.transparent),
-              ),
-            ),
-            // 2. Сам Popover
+            // Сам Popover
             CompositedTransformFollower(
               link: _layerLink,
               showWhenUnlinked: false,
@@ -88,7 +97,17 @@ class _PopoverPrimitiveState extends State<PopoverPrimitive> {
                   width: widget.matchTriggerWidth ? triggerWidth : widget.width,
                   child: Material(
                     type: MaterialType.transparency,
-                    child: widget.contentBuilder(context),
+                    child: TapRegion(
+                      groupId: _internalTapRegionGroupId,
+                      onTapOutside: (_) {
+                        if (widget.onRequestClose != null) {
+                          widget.onRequestClose!();
+                        } else {
+                          _controller.hide();
+                        }
+                      },
+                      child: widget.contentBuilder(context),
+                    ),
                   ),
                 ),
               ),
@@ -107,6 +126,9 @@ class _PopoverPrimitiveState extends State<PopoverPrimitive> {
 
   @override
   Widget build(BuildContext context) {
-    return CompositedTransformTarget(link: _layerLink, child: widget.trigger);
+    return TapRegion(
+      groupId: _internalTapRegionGroupId,
+      child: CompositedTransformTarget(link: _layerLink, child: widget.trigger),
+    );
   }
 }

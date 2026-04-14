@@ -51,7 +51,7 @@ class StatusBadge extends StatelessWidget {
       ),
       child: Text(
         label.toUpperCase(),
-        style: theme.commonTextStyles.caption3Bold.copyWith(
+        style: theme.commonTextStyles.caption2Bold.copyWith(
           color: textColor,
           letterSpacing: 0.5,
         ),
