@@ -8,16 +8,16 @@
   <language>en</language>
 
   <item>
-    <title>Version 1.0.3-dev.5</title>
-    <sparkle:releaseNotesLink>https://github.com/vavilov2212/worklog_studio/releases/tag/v1.0.3-dev.5</sparkle:releaseNotesLink>
-    <pubDate>Mon, 13 Apr 2026 22:07:03 -0500</pubDate>
+    <title>Version 1.0.3</title>
+    <sparkle:releaseNotesLink>https://github.com/vavilov2212/worklog_studio/releases/tag/v1.0.3</sparkle:releaseNotesLink>
+    <pubDate>Mon, 13 Apr 2026 22:12:06 -0500</pubDate>
 
     <enclosure
-      url="https://github.com/vavilov2212/worklog_studio/releases/download/v1.0.3-dev.5/worklogStudio.dmg"
-      sparkle:version="8"
-      sparkle:shortVersionString="1.0.3-dev.5"
-      sparkle:edSignature="WIylLlDSsgLf4Wzfb7qvAa1l+K9IG+aTChcQ+3PM5jto7//U+Cnk/wSXLcb06OBc1gNP4zGJv1Ho0WrtfF+rBg=="
-      length="25311122"
+      url="https://github.com/vavilov2212/worklog_studio/releases/download/v1.0.3/worklogStudio.dmg"
+      sparkle:version="9"
+      sparkle:shortVersionString="1.0.3"
+      sparkle:edSignature="Rt1imm2cvRp6gopRW+xsxl/2FeZeETZhpFO+2dSw5CNJLdVNHJbCuFIDT+gLeQxt6HSmkfCNtJkoTn8ZljXcDw=="
+      length="25311039"
       type="application/octet-stream"/>
   </item>
 
