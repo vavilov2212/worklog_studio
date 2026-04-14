@@ -111,7 +111,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
       status: entry.status,
     );
 
-    if (widget.isNew) {
+    if (_isNew) {
       await state.createEntry(updatedEntry);
     } else {
       await state.updateEntry(updatedEntry);

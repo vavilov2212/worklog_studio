@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:uuid/uuid.dart';
 import 'package:worklog_studio/core/services/time_tracker_service.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
 import 'package:worklog_studio/domain/time_tracker.dart';
@@ -82,6 +83,9 @@ class TimeTrackerState extends ChangeNotifier {
   }
 
   Future<void> createEntry(TimeEntry entry) async {
+    if (entry.id.isEmpty) {
+      entry = entry.copyWith(id: const Uuid().v4());
+    }
     await _service.createEntry(entry);
     await loadEntries();
   }
