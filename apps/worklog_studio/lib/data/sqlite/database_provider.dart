@@ -1,5 +1,6 @@
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:path_provider/path_provider.dart';
 
 class DatabaseProvider {
   static const _dbName = 'worklog.db';
@@ -10,8 +11,8 @@ class DatabaseProvider {
   static Future<Database> getDatabase() async {
     if (_db != null) return _db!;
 
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, _dbName);
+    final dir = await getApplicationSupportDirectory();
+    final path = join(dir.path, _dbName);
 
     _db = await openDatabase(path, version: _dbVersion, onCreate: _onCreate);
 
