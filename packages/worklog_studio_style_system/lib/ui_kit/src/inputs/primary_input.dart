@@ -166,7 +166,6 @@ class _PrimaryInputState extends State<PrimaryInput> {
                         color: textColor,
                       ),
                       onChanged: (value) {
-                        setState(() {});
                         widget.onChanged?.call(value);
                       },
                       onSubmitted: widget.onSubmitted,

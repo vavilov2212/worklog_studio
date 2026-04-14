@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' hide DrawerHeader;
 import 'package:provider/provider.dart';
 import 'package:worklog_studio/domain/project.dart';
+import 'package:worklog_studio/feature/common/presentation/components/inline_field_controller.dart';
 import 'package:worklog_studio/feature/common/presentation/resizable_drawer.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_content.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_header.dart';
@@ -32,7 +33,9 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
   bool _isConfirmingDelete = false;
   late TextEditingController _nameController;
   late TextEditingController _descriptionController;
-  String? _editingField;
+  final InlineFieldController _nameFieldController = InlineFieldController();
+  final InlineFieldController _descriptionFieldController =
+      InlineFieldController();
 
   @override
   void initState() {
@@ -62,6 +65,8 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
+    _nameFieldController.dispose();
+    _descriptionFieldController.dispose();
     super.dispose();
   }
 
@@ -211,18 +216,13 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
                           label: 'PROJECT NAME',
                           value: _nameController.text,
                           placeholder: 'Enter project name...',
-                          isEditing: _editingField == 'name',
-                          onTap: () => setState(() => _editingField = 'name'),
-                          editWidget: TapRegion(
-                            onTapOutside: (_) {
-                              setState(() => _editingField = null);
-                            },
-                            child: PrimaryInput(
-                              label: null,
-                              hintText: 'Enter project name...',
-                              controller: _nameController,
-                              autofocus: true,
-                            ),
+                          controller: _nameFieldController,
+                          textController: _nameController,
+                          editWidget: PrimaryInput(
+                            label: null,
+                            hintText: 'Enter project name...',
+                            controller: _nameController,
+                            autofocus: true,
                           ),
                         ),
                       ],
@@ -240,20 +240,14 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
                             label: 'DESCRIPTION',
                             value: _descriptionController.text,
                             placeholder: 'Add a description...',
-                            isEditing: _editingField == 'description',
+                            controller: _descriptionFieldController,
+                            textController: _descriptionController,
                             isTextArea: true,
-                            onTap: () =>
-                                setState(() => _editingField = 'description'),
-                            editWidget: TapRegion(
-                              onTapOutside: (_) {
-                                setState(() => _editingField = null);
-                              },
-                              child: TextArea(
-                                label: null,
-                                hintText: 'Add a description...',
-                                controller: _descriptionController,
-                                autofocus: true,
-                              ),
+                            editWidget: TextArea(
+                              label: null,
+                              hintText: 'Add a description...',
+                              controller: _descriptionController,
+                              autofocus: true,
                             ),
                           ),
                           SizedBox(height: theme.spacings.s32),

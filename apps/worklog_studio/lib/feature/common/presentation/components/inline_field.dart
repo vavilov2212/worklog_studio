@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
+import 'inline_field_controller.dart';
 
 class InlineField extends StatefulWidget {
   final String label;
   final String value;
   final String placeholder;
   final Widget editWidget;
-  final bool isEditing;
-  final VoidCallback onTap;
   final bool isTextArea;
+  final InlineFieldController controller;
+  final TextEditingController? textController;
 
   const InlineField({
     super.key,
@@ -16,9 +17,9 @@ class InlineField extends StatefulWidget {
     required this.value,
     this.placeholder = 'Empty',
     required this.editWidget,
-    required this.isEditing,
-    required this.onTap,
     this.isTextArea = false,
+    required this.controller,
+    this.textController,
   });
 
   @override
@@ -29,16 +30,70 @@ class _InlineFieldState extends State<InlineField> {
   bool _isHovered = false;
 
   @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_onControllerChange);
+    widget.textController?.addListener(_onTextControllerChange);
+  }
+
+  void _onTextControllerChange() {
+    setState(() {});
+  }
+
+  String get _displayValue {
+    if (widget.textController != null) {
+      return widget.textController!.text;
+    }
+    if (_currentIsEditing) {
+      return widget.controller.currentValue ?? widget.value;
+    }
+    return widget.controller.currentValue ?? widget.value;
+  }
+
+  @override
+  void didUpdateWidget(InlineField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.controller != oldWidget.controller) {
+      oldWidget.controller.removeListener(_onControllerChange);
+      widget.controller.addListener(_onControllerChange);
+    }
+    if (widget.textController != oldWidget.textController) {
+      oldWidget.textController?.removeListener(_onTextControllerChange);
+      widget.textController?.addListener(_onTextControllerChange);
+    }
+    if (widget.value != oldWidget.value) {
+      widget.controller.resetValue();
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onControllerChange);
+    widget.textController?.removeListener(_onTextControllerChange);
+    super.dispose();
+  }
+
+  void _onControllerChange() {
+    setState(() {});
+  }
+
+  bool get _currentIsEditing => widget.controller.isEditing;
+
+  void _handleTap() {
+    widget.controller.enterEditMode(widget.value);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
 
-    return MouseRegion(
+    Widget content = MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: widget.onTap,
+        onTap: _handleTap,
         behavior: HitTestBehavior.opaque,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -49,14 +104,14 @@ class _InlineFieldState extends State<InlineField> {
               child: Text(
                 widget.label,
                 style: theme.commonTextStyles.captionSemiBold.copyWith(
-                  color: _isHovered || widget.isEditing
+                  color: _isHovered || _currentIsEditing
                       ? palette.text.primary
                       : palette.text.secondary2,
                 ),
               ),
             ),
             SizedBox(height: theme.spacings.s8),
-            if (widget.isTextArea && widget.isEditing)
+            if (widget.isTextArea && _currentIsEditing)
               widget.editWidget
             else
               Stack(
@@ -65,7 +120,7 @@ class _InlineFieldState extends State<InlineField> {
                   // View Mode (Base Layer)
                   // Always rendered with Visibility(maintainSize: true) to ensure layout stability
                   Visibility(
-                    visible: !widget.isEditing,
+                    visible: !_currentIsEditing,
                     maintainSize: true,
                     maintainAnimation: true,
                     maintainState: true,
@@ -88,14 +143,14 @@ class _InlineFieldState extends State<InlineField> {
                         children: [
                           Expanded(
                             child: Text(
-                              widget.value.isEmpty
+                              _displayValue.isEmpty
                                   ? widget.placeholder
-                                  : widget.value,
+                                  : _displayValue,
                               style: theme.commonTextStyles.body.copyWith(
-                                color: widget.value.isEmpty
+                                color: _displayValue.isEmpty
                                     ? palette.text.muted
                                     : palette.text.primary,
-                                fontStyle: widget.value.isEmpty
+                                fontStyle: _displayValue.isEmpty
                                     ? FontStyle.italic
                                     : null,
                               ),
@@ -119,7 +174,7 @@ class _InlineFieldState extends State<InlineField> {
                     ),
                   ),
                   // Edit Mode (Overlay Layer) - Only for non-TextArea fields
-                  if (widget.isEditing && !widget.isTextArea)
+                  if (_currentIsEditing && !widget.isTextArea)
                     Positioned.fill(child: widget.editWidget),
                 ],
               ),
@@ -127,5 +182,17 @@ class _InlineFieldState extends State<InlineField> {
         ),
       ),
     );
+
+    if (_currentIsEditing) {
+      return TapRegion(
+        groupId: widget.controller.tapRegionGroupId,
+        onTapOutside: (_) {
+          widget.controller.handleEditorCommit();
+        },
+        child: content,
+      );
+    }
+
+    return content;
   }
 }

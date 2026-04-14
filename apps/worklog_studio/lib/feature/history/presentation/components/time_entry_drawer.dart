@@ -2,6 +2,7 @@ import 'package:flutter/material.dart' hide DrawerHeader;
 import 'package:provider/provider.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_content.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_header.dart';
+import 'package:worklog_studio/feature/common/presentation/components/inline_field_controller.dart';
 import 'package:worklog_studio/feature/common/presentation/resizable_drawer.dart';
 import 'package:worklog_studio/feature/common/presentation/components/inline_field.dart';
 import 'package:worklog_studio/state/time_tracker_state.dart';
@@ -35,9 +36,14 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
   late TextEditingController _commentController;
   late TextEditingController _startTimeController;
   late TextEditingController _endTimeController;
+  final InlineFieldController _projectFieldController = InlineFieldController();
+  final InlineFieldController _taskFieldController = InlineFieldController();
+  final InlineFieldController _commentFieldController = InlineFieldController();
+  final InlineFieldController _startTimeFieldController =
+      InlineFieldController();
+  final InlineFieldController _endTimeFieldController = InlineFieldController();
   String? _selectedProjectId;
   String? _selectedTaskId;
-  String? _editingField;
 
   @override
   void initState() {
@@ -74,6 +80,11 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
     _commentController.dispose();
     _startTimeController.dispose();
     _endTimeController.dispose();
+    _projectFieldController.dispose();
+    _taskFieldController.dispose();
+    _commentFieldController.dispose();
+    _startTimeFieldController.dispose();
+    _endTimeFieldController.dispose();
     super.dispose();
   }
 
@@ -260,14 +271,14 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                               label: 'PROJECT',
                               value: selectedProject?.name ?? '',
                               placeholder: 'Select Project',
-                              isEditing: _editingField == 'project',
-                              onTap: () =>
-                                  setState(() => _editingField = 'project'),
+                              controller: _projectFieldController,
                               editWidget: Select<String>(
                                 autoOpen: true,
+                                tapRegionGroupId:
+                                    _projectFieldController.tapRegionGroupId,
                                 onOpenChange: (isOpen) {
-                                  if (!isOpen && _editingField == 'project') {
-                                    setState(() => _editingField = null);
+                                  if (!isOpen) {
+                                    _projectFieldController.handleEditorClose();
                                   }
                                 },
                                 value: _selectedProjectId,
@@ -276,8 +287,8 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                   setState(() {
                                     _selectedProjectId = value;
                                     _selectedTaskId = null;
-                                    _editingField = null;
                                   });
+                                  _projectFieldController.handleEditorCommit();
                                 },
                                 options: state.projects.map((p) {
                                   return SelectOption(
@@ -301,14 +312,14 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                               label: 'TASK',
                               value: selectedTask?.title ?? '',
                               placeholder: 'Select Task',
-                              isEditing: _editingField == 'task',
-                              onTap: () =>
-                                  setState(() => _editingField = 'task'),
+                              controller: _taskFieldController,
                               editWidget: Select<String>(
                                 autoOpen: true,
+                                tapRegionGroupId:
+                                    _taskFieldController.tapRegionGroupId,
                                 onOpenChange: (isOpen) {
-                                  if (!isOpen && _editingField == 'task') {
-                                    setState(() => _editingField = null);
+                                  if (!isOpen) {
+                                    _taskFieldController.handleEditorClose();
                                   }
                                 },
                                 value: _selectedTaskId,
@@ -316,8 +327,8 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                 onChanged: (value) {
                                   setState(() {
                                     _selectedTaskId = value;
-                                    _editingField = null;
                                   });
+                                  _taskFieldController.handleEditorCommit();
                                 },
                                 options: state.tasks
                                     .where(
@@ -352,20 +363,13 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                   label: 'START TIME',
                                   value: _startTimeController.text,
                                   placeholder: 'HH:mm',
-                                  isEditing: _editingField == 'startTime',
-                                  onTap: () => setState(
-                                    () => _editingField = 'startTime',
-                                  ),
-                                  editWidget: TapRegion(
-                                    onTapOutside: (_) {
-                                      setState(() => _editingField = null);
-                                    },
-                                    child: PrimaryInput(
-                                      label: null,
-                                      controller: _startTimeController,
-                                      hintText: 'HH:mm',
-                                      autofocus: true,
-                                    ),
+                                  controller: _startTimeFieldController,
+                                  textController: _startTimeController,
+                                  editWidget: PrimaryInput(
+                                    label: null,
+                                    controller: _startTimeController,
+                                    hintText: 'HH:mm',
+                                    autofocus: true,
                                   ),
                                 ),
                               ),
@@ -375,19 +379,13 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                   label: 'END TIME',
                                   value: _endTimeController.text,
                                   placeholder: 'HH:mm',
-                                  isEditing: _editingField == 'endTime',
-                                  onTap: () =>
-                                      setState(() => _editingField = 'endTime'),
-                                  editWidget: TapRegion(
-                                    onTapOutside: (_) {
-                                      setState(() => _editingField = null);
-                                    },
-                                    child: PrimaryInput(
-                                      label: null,
-                                      controller: _endTimeController,
-                                      hintText: 'HH:mm',
-                                      autofocus: true,
-                                    ),
+                                  controller: _endTimeFieldController,
+                                  textController: _endTimeController,
+                                  editWidget: PrimaryInput(
+                                    label: null,
+                                    controller: _endTimeController,
+                                    hintText: 'HH:mm',
+                                    autofocus: true,
                                   ),
                                 ),
                               ),
@@ -471,20 +469,14 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                             label: 'COMMENTS',
                             value: _commentController.text,
                             placeholder: 'Add a comment...',
-                            isEditing: _editingField == 'comment',
+                            controller: _commentFieldController,
+                            textController: _commentController,
                             isTextArea: true,
-                            onTap: () =>
-                                setState(() => _editingField = 'comment'),
-                            editWidget: TapRegion(
-                              onTapOutside: (_) {
-                                setState(() => _editingField = null);
-                              },
-                              child: TextArea(
-                                label: null,
-                                hintText: 'Add a comment...',
-                                controller: _commentController,
-                                autofocus: true,
-                              ),
+                            editWidget: TextArea(
+                              label: null,
+                              hintText: 'Add a comment...',
+                              controller: _commentController,
+                              autofocus: true,
                             ),
                           ),
                           SizedBox(height: theme.spacings.s32),

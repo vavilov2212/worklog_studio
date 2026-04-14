@@ -14,6 +14,7 @@ class TextArea extends StatefulWidget {
   final int maxLength;
   final int? maxLines;
   final bool showCounter;
+  final ValueChanged<String>? onChanged;
 
   const TextArea({
     required this.hintText,
@@ -26,6 +27,7 @@ class TextArea extends StatefulWidget {
     this.keyboardType = TextInputType.text,
     this.maxLines = 5,
     this.maxLength = 3000,
+    this.onChanged,
     super.key,
   });
 
@@ -139,7 +141,11 @@ class _TextAreaState extends State<TextArea> {
                       style: theme.commonTextStyles.body.copyWith(
                         color: _textColor,
                       ),
-                      onChanged: (_) => setState(() {}),
+                      onChanged: (val) {
+                        if (widget.onChanged != null) {
+                          widget.onChanged!(val);
+                        }
+                      },
                     ),
                   ),
                   // Resize Handle (Bottom Edge)

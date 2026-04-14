@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_content.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_header.dart';
+import 'package:worklog_studio/feature/common/presentation/components/inline_field_controller.dart';
 import 'package:worklog_studio/feature/common/presentation/resizable_drawer.dart';
 import 'package:worklog_studio/feature/common/presentation/components/inline_field.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
@@ -30,8 +31,11 @@ class _TaskDrawerState extends State<TaskDrawer> {
   bool _isConfirmingDelete = false;
   late TextEditingController _titleController;
   late TextEditingController _descriptionController;
+  final InlineFieldController _titleFieldController = InlineFieldController();
+  final InlineFieldController _descriptionFieldController =
+      InlineFieldController();
+  final InlineFieldController _projectFieldController = InlineFieldController();
   String? _selectedProjectId;
-  String? _editingField;
 
   @override
   void initState() {
@@ -62,6 +66,9 @@ class _TaskDrawerState extends State<TaskDrawer> {
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _titleFieldController.dispose();
+    _descriptionFieldController.dispose();
+    _projectFieldController.dispose();
     super.dispose();
   }
 
@@ -208,18 +215,13 @@ class _TaskDrawerState extends State<TaskDrawer> {
                           label: 'TASK TITLE',
                           value: _titleController.text,
                           placeholder: 'Enter task title...',
-                          isEditing: _editingField == 'title',
-                          onTap: () => setState(() => _editingField = 'title'),
-                          editWidget: TapRegion(
-                            onTapOutside: (_) {
-                              setState(() => _editingField = null);
-                            },
-                            child: PrimaryInput(
-                              label: null,
-                              hintText: 'Enter task title...',
-                              controller: _titleController,
-                              autofocus: true,
-                            ),
+                          controller: _titleFieldController,
+                          textController: _titleController,
+                          editWidget: PrimaryInput(
+                            label: null,
+                            hintText: 'Enter task title...',
+                            controller: _titleController,
+                            autofocus: true,
                           ),
                         ),
                       ],
@@ -237,20 +239,14 @@ class _TaskDrawerState extends State<TaskDrawer> {
                             label: 'DESCRIPTION',
                             value: _descriptionController.text,
                             placeholder: 'Add a description...',
-                            isEditing: _editingField == 'description',
+                            controller: _descriptionFieldController,
+                            textController: _descriptionController,
                             isTextArea: true,
-                            onTap: () =>
-                                setState(() => _editingField = 'description'),
-                            editWidget: TapRegion(
-                              onTapOutside: (_) {
-                                setState(() => _editingField = null);
-                              },
-                              child: TextArea(
-                                label: null,
-                                hintText: 'Add a description...',
-                                controller: _descriptionController,
-                                autofocus: true,
-                              ),
+                            editWidget: TextArea(
+                              label: null,
+                              hintText: 'Add a description...',
+                              controller: _descriptionController,
+                              autofocus: true,
                             ),
                           ),
                           SizedBox(height: theme.spacings.s32),
@@ -271,18 +267,16 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                       label: 'PROJECT',
                                       value: selectedProject?.name ?? '',
                                       placeholder: 'Select Project',
-                                      isEditing: _editingField == 'project',
-                                      onTap: () => setState(
-                                        () => _editingField = 'project',
-                                      ),
+                                      controller: _projectFieldController,
                                       editWidget: Select<String>(
                                         autoOpen: true,
+                                        tapRegionGroupId:
+                                            _projectFieldController
+                                                .tapRegionGroupId,
                                         onOpenChange: (isOpen) {
-                                          if (!isOpen &&
-                                              _editingField == 'project') {
-                                            setState(
-                                              () => _editingField = null,
-                                            );
+                                          if (!isOpen) {
+                                            _projectFieldController
+                                                .handleEditorClose();
                                           }
                                         },
                                         value: _selectedProjectId,
@@ -290,8 +284,9 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                         onChanged: (value) {
                                           setState(() {
                                             _selectedProjectId = value;
-                                            _editingField = null;
                                           });
+                                          _projectFieldController
+                                              .handleEditorCommit();
                                         },
                                         options: state.projects.map((p) {
                                           return SelectOption(

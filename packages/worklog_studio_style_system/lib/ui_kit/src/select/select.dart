@@ -46,6 +46,7 @@ class Select<T> extends StatefulWidget {
 
   final bool autoOpen;
   final ValueChanged<bool>? onOpenChange;
+  final Object? tapRegionGroupId;
 
   const Select({
     super.key,
@@ -64,6 +65,7 @@ class Select<T> extends StatefulWidget {
     this.triggerBuilder,
     this.autoOpen = false,
     this.onOpenChange,
+    this.tapRegionGroupId,
   }) : assert(
          !(value != null && defaultValue != null),
          'Select cannot be both controlled and uncontrolled.',
@@ -179,6 +181,7 @@ class _SelectState<T> extends State<Select<T>> {
       controller: _controller,
       enabled: widget.enabled,
       matchTriggerWidth: widget.matchTriggerWidth,
+      tapRegionGroupId: widget.tapRegionGroupId,
       triggerBuilder: (context, open, isOpen) {
         if (widget.triggerBuilder != null) {
           return widget.triggerBuilder!(context, selectedOption, isOpen);
