@@ -4,14 +4,23 @@ import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 class SelectTrigger extends StatelessWidget {
   final String? label;
   final String placeholder;
+  final TextEditingController? controller;
+  final FocusNode? focusNode;
+  final bool isOpen;
 
-  const SelectTrigger({required this.label, required this.placeholder});
+  const SelectTrigger({
+    super.key,
+    required this.label,
+    required this.placeholder,
+    this.controller,
+    this.focusNode,
+    this.isOpen = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
-    final hasValue = label != null;
 
     return Container(
       height: theme.spacings.s48,
@@ -20,7 +29,9 @@ class SelectTrigger extends StatelessWidget {
         vertical: theme.spacings.s12,
       ),
       decoration: BoxDecoration(
-        border: Border.all(color: palette.border.primary),
+        border: Border.all(
+          color: isOpen ? palette.accent.primary : palette.border.primary,
+        ),
         borderRadius: theme.radiuses.md.circular,
         color: palette.background.surface,
       ),
@@ -28,14 +39,37 @@ class SelectTrigger extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Expanded(
-            child: Text(
-              hasValue ? label! : placeholder,
-              style: theme.commonTextStyles.body.copyWith(
-                color: hasValue ? palette.text.primary : palette.text.muted,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+            child: controller != null
+                ? TextField(
+                    controller: controller,
+                    focusNode: focusNode,
+                    style: theme.commonTextStyles.body.copyWith(
+                      color: palette.text.primary,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: isOpen ? 'Search...' : (label ?? placeholder),
+                      hintStyle: theme.commonTextStyles.body.copyWith(
+                        color: label != null && !isOpen
+                            ? palette.text.primary
+                            : palette.text.muted,
+                      ),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  )
+                : Text(
+                    label ?? placeholder,
+                    style: theme.commonTextStyles.body.copyWith(
+                      color: label != null
+                          ? palette.text.primary
+                          : palette.text.muted,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
           ),
           Icon(Icons.unfold_more, size: 18, color: palette.text.muted),
         ],

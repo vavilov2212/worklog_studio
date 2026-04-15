@@ -99,12 +99,15 @@ class _SelectState<T> extends State<Select<T>> {
 
   T? get _currentValue => _isControlled ? widget.value : _internalValue;
 
+  late final FocusNode _focusNode;
+
   @override
   void initState() {
     super.initState();
 
     _controller = widget.controller ?? ComboboxController();
     _searchController = TextEditingController();
+    _focusNode = FocusNode();
 
     if (!_isControlled) {
       _internalValue = widget.defaultValue;
@@ -118,9 +121,18 @@ class _SelectState<T> extends State<Select<T>> {
 
     _controller.addListener(_handleOpenChange);
 
+    _focusNode.addListener(() {
+      if (_focusNode.hasFocus) {
+        if (!_controller.isOpen) {
+          _controller.open();
+        }
+      }
+    });
+
     if (widget.autoOpen) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
+          _focusNode.requestFocus();
           _controller.open();
         }
       });
@@ -131,6 +143,9 @@ class _SelectState<T> extends State<Select<T>> {
     widget.onOpenChange?.call(_controller.isOpen);
     if (!_controller.isOpen) {
       _searchController.clear();
+      _focusNode.unfocus();
+    } else {
+      _focusNode.requestFocus();
     }
   }
 
@@ -161,6 +176,7 @@ class _SelectState<T> extends State<Select<T>> {
       _controller.dispose();
     }
     _searchController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -205,6 +221,9 @@ class _SelectState<T> extends State<Select<T>> {
         return SelectTrigger(
           label: selectedOption?.label,
           placeholder: widget.placeholder,
+          controller: widget.searchable ? _searchController : null,
+          focusNode: widget.searchable ? _focusNode : null,
+          isOpen: isOpen,
         );
       },
       contentBuilder: (context, close) {

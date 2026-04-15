@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
-import 'select_option.dart';
-
 class SelectContent<T> extends StatefulWidget {
   final bool searchable;
   final TextEditingController searchController;
@@ -71,38 +69,6 @@ class _SelectContentState<T> extends State<SelectContent<T>> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (widget.searchable)
-            Padding(
-              padding: EdgeInsets.all(theme.spacings.s8),
-              child: TextField(
-                controller: widget.searchController,
-                focusNode: _searchFocusNode,
-                style: theme.commonTextStyles.body,
-                decoration: InputDecoration(
-                  hintText: 'Search...',
-                  hintStyle: theme.commonTextStyles.body.copyWith(
-                    color: palette.text.muted,
-                  ),
-                  isDense: true,
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: theme.spacings.s12,
-                    vertical: theme.spacings.s8,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: theme.radiuses.sm.circular,
-                    borderSide: BorderSide(color: palette.border.primary),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: theme.radiuses.sm.circular,
-                    borderSide: BorderSide(color: palette.border.primary),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: theme.radiuses.sm.circular,
-                    borderSide: BorderSide(color: palette.accent.primary),
-                  ),
-                ),
-              ),
-            ),
           if (widget.options.isEmpty && !hasFooter)
             Padding(
               padding: EdgeInsets.all(theme.spacings.s16),
