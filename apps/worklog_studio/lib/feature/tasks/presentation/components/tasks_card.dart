@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:worklog_studio/domain/resolved_task.dart';
 import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/feature/common/presentation/components/card_content.dart';
 import 'package:worklog_studio/feature/common/presentation/interactive_card.dart';
@@ -6,7 +7,7 @@ import 'package:worklog_studio_style_system/theme/colors_palette/colors_palette_
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 class TaskCard extends StatelessWidget {
-  final Task task;
+  final ResolvedTask task;
   final bool isSelected;
   final VoidCallback onTap;
 
@@ -92,7 +93,7 @@ class TaskCard extends StatelessWidget {
             ),
             SizedBox(width: theme.spacings.s8),
             Text(
-              'Project', // Default project name
+              task.projectName,
               style: theme.commonTextStyles.caption.copyWith(
                 color: palette.text.secondary,
               ),

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
 import 'package:worklog_studio/domain/resolved_time_entry.dart';
+import 'package:worklog_studio/state/entity_resolver.dart';
 import 'package:worklog_studio/state/time_tracker_state.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
 import 'components/time_entry_card.dart';
@@ -48,28 +49,33 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<TimeTrackerState>();
-    final projectTaskState = context.watch<ProjectTaskState>();
+    final resolver = context.watch<EntityResolver>();
 
     ResolvedTimeEntry? resolvedSelectedEntry;
 
     if (selectedEntry != null) {
-      final task = selectedEntry!.taskId != null
-          ? projectTaskState.tasks
-                .where((t) => t.id == selectedEntry!.taskId)
-                .firstOrNull
-          : null;
-      final project = selectedEntry!.projectId != null
-          ? projectTaskState.projects
-                .where((p) => p.id == selectedEntry!.projectId)
-                .firstOrNull
-          : null;
+      resolvedSelectedEntry = resolver.getResolvedTimeEntry(selectedEntry!.id);
 
-      resolvedSelectedEntry = ResolvedTimeEntry(
-        entry: selectedEntry!,
-        task: task,
-        project: project,
-      );
+      // If it's a new entry (not yet in state), we resolve it manually
+      if (resolvedSelectedEntry == null && selectedEntry!.id.isEmpty) {
+        final projectTaskState = context.read<ProjectTaskState>();
+        final task = selectedEntry!.taskId != null
+            ? projectTaskState.tasks
+                  .where((t) => t.id == selectedEntry!.taskId)
+                  .firstOrNull
+            : null;
+        final project = selectedEntry!.projectId != null
+            ? projectTaskState.projects
+                  .where((p) => p.id == selectedEntry!.projectId)
+                  .firstOrNull
+            : null;
+
+        resolvedSelectedEntry = ResolvedTimeEntry(
+          entry: selectedEntry!,
+          task: task,
+          project: project,
+        );
+      }
     }
 
     return Row(
@@ -78,7 +84,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         // Main Content Area (Shrinks when panel opens)
         Expanded(
           child: TimeEntryList(
-            entries: state.entries,
+            entries: resolver.getResolvedTimeEntries(),
             selectedEntry: selectedEntry,
             onEntrySelected: _handleEntrySelected,
             onCreateEntry: _handleCreateEntry,
@@ -96,7 +102,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 }
 
 class TimeEntryList extends StatelessWidget {
-  final List<TimeEntry> entries;
+  final List<ResolvedTimeEntry> entries;
   final TimeEntry? selectedEntry;
   final ValueChanged<TimeEntry> onEntrySelected;
   final VoidCallback onCreateEntry;
@@ -113,10 +119,9 @@ class TimeEntryList extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
-    final projectTaskState = context.watch<ProjectTaskState>();
 
     // Sort entries: latest first
-    final sortedEntries = List<TimeEntry>.from(entries)
+    final sortedEntries = List<ResolvedTimeEntry>.from(entries)
       ..sort((a, b) {
         // Active entries always at the top
         if (a.isRunning && !b.isRunning) return -1;
@@ -125,8 +130,9 @@ class TimeEntryList extends StatelessWidget {
       });
 
     // Group by date
-    final Map<DateTime, List<TimeEntry>> groupedEntries = {};
-    for (final entry in sortedEntries) {
+    final Map<DateTime, List<ResolvedTimeEntry>> groupedEntries = {};
+    for (final resolvedEntry in sortedEntries) {
+      final entry = resolvedEntry.entry;
       final date = DateTime(
         entry.startAt.year,
         entry.startAt.month,
@@ -135,7 +141,7 @@ class TimeEntryList extends StatelessWidget {
       if (!groupedEntries.containsKey(date)) {
         groupedEntries[date] = [];
       }
-      groupedEntries[date]!.add(entry);
+      groupedEntries[date]!.add(resolvedEntry);
     }
 
     final sortedDates = groupedEntries.keys.toList()
@@ -162,7 +168,8 @@ class TimeEntryList extends StatelessWidget {
             final dailyEntries = groupedEntries[date]!;
             final totalDuration = dailyEntries.fold<Duration>(
               Duration.zero,
-              (prev, entry) => prev + entry.duration(DateTime.now()),
+              (prev, resolvedEntry) =>
+                  prev + resolvedEntry.entry.duration(DateTime.now()),
             );
 
             return Column(
@@ -194,25 +201,9 @@ class TimeEntryList extends StatelessWidget {
                 ),
                 Column(
                   spacing: theme.spacings.s12,
-                  children: dailyEntries.map((entry) {
+                  children: dailyEntries.map((resolvedEntry) {
+                    final entry = resolvedEntry.entry;
                     final isSelected = selectedEntry?.id == entry.id;
-
-                    final task = entry.taskId != null
-                        ? projectTaskState.tasks
-                              .where((t) => t.id == entry.taskId)
-                              .firstOrNull
-                        : null;
-                    final project = entry.projectId != null
-                        ? projectTaskState.projects
-                              .where((p) => p.id == entry.projectId)
-                              .firstOrNull
-                        : null;
-
-                    final resolvedEntry = ResolvedTimeEntry(
-                      entry: entry,
-                      task: task,
-                      project: project,
-                    );
 
                     return TimeEntryCard(
                       resolvedEntry: resolvedEntry,

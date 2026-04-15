@@ -13,6 +13,7 @@ import 'package:worklog_studio/data/sqlite/sqlite_task_repository.dart';
 import 'package:worklog_studio/data/system_clock.dart';
 import 'package:worklog_studio/feature/app/layout/app_bar/app_bar_scope.dart';
 import 'package:worklog_studio/feature/app/layout/app_shell.dart';
+import 'package:worklog_studio/state/entity_resolver.dart';
 import 'package:worklog_studio/state/time_tracker_state.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
 import 'package:worklog_studio_style_system/ui_kit/src/drawer/drawer_service.dart';
@@ -48,6 +49,19 @@ class App extends StatelessWidget {
             taskRepository: taskRepo,
             clock: clock,
           );
+        },
+      ),
+      ChangeNotifierProxyProvider2<
+        TimeTrackerState,
+        ProjectTaskState,
+        EntityResolver
+      >(
+        create: (context) => EntityResolver(
+          timeTrackerState: context.read<TimeTrackerState>(),
+          projectTaskState: context.read<ProjectTaskState>(),
+        ),
+        update: (context, timeTrackerState, projectTaskState, resolver) {
+          return resolver!..update(timeTrackerState, projectTaskState);
         },
       ),
     ],

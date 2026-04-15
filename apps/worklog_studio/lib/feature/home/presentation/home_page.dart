@@ -3,9 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:worklog_studio/feature/tasks/presentation/components/tasks_card.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/state/time_tracker_state.dart';
-import 'package:worklog_studio/state/project_task_state.dart';
+import 'package:worklog_studio/state/entity_resolver.dart';
 import 'package:worklog_studio/feature/history/presentation/components/time_entry_card.dart';
-import 'package:worklog_studio/domain/resolved_time_entry.dart';
 
 class HomePage extends StatefulWidget {
   final String title;
@@ -211,25 +210,15 @@ class _TopTasksSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
-    final projectTaskState = context.watch<ProjectTaskState>();
-    final timeTrackerState = context.watch<TimeTrackerState>();
+    final resolver = context.watch<EntityResolver>();
 
-    // Calculate total time per task
-    final Map<String, Duration> taskDurations = {};
-    for (final entry in timeTrackerState.entries) {
-      if (entry.taskId != null) {
-        taskDurations[entry.taskId!] =
-            (taskDurations[entry.taskId!] ?? Duration.zero) +
-            entry.duration(DateTime.now());
-      }
-    }
+    final resolvedTasks = resolver.getResolvedTasks();
+    final now = DateTime.now();
 
     // Sort tasks by duration
-    final sortedTasks = List.of(projectTaskState.tasks)
+    final sortedTasks = List.of(resolvedTasks)
       ..sort((a, b) {
-        final durationA = taskDurations[a.id] ?? Duration.zero;
-        final durationB = taskDurations[b.id] ?? Duration.zero;
-        return durationB.compareTo(durationA);
+        return b.duration(now).compareTo(a.duration(now));
       });
 
     final topTasks = sortedTasks.take(5).toList();
@@ -266,8 +255,12 @@ class _TopTasksSection extends StatelessWidget {
           else
             Column(
               spacing: theme.spacings.s16,
-              children: topTasks.map((task) {
-                return TaskCard(task: task, isSelected: false, onTap: () {});
+              children: topTasks.map((resolvedTask) {
+                return TaskCard(
+                  task: resolvedTask,
+                  isSelected: false,
+                  onTap: () {},
+                );
               }).toList(),
             ),
         ],
@@ -283,10 +276,11 @@ class _RecentActivitySection extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
-    final state = context.watch<TimeTrackerState>();
-    final projectTaskState = context.watch<ProjectTaskState>();
+    final resolver = context.watch<EntityResolver>();
 
-    final sortedEntries = List.of(state.entries)
+    final resolvedEntries = resolver.getResolvedTimeEntries();
+
+    final sortedEntries = List.of(resolvedEntries)
       ..sort((a, b) {
         if (a.isRunning && !b.isRunning) return -1;
         if (!a.isRunning && b.isRunning) return 1;
@@ -316,24 +310,7 @@ class _RecentActivitySection extends StatelessWidget {
           else
             Column(
               spacing: theme.spacings.s12,
-              children: recentEntries.map((entry) {
-                final task = entry.taskId != null
-                    ? projectTaskState.tasks
-                          .where((t) => t.id == entry.taskId)
-                          .firstOrNull
-                    : null;
-                final project = entry.projectId != null
-                    ? projectTaskState.projects
-                          .where((p) => p.id == entry.projectId)
-                          .firstOrNull
-                    : null;
-
-                final resolvedEntry = ResolvedTimeEntry(
-                  entry: entry,
-                  task: task,
-                  project: project,
-                );
-
+              children: recentEntries.map((resolvedEntry) {
                 return TimeEntryCard(
                   resolvedEntry: resolvedEntry,
                   isSelected: false,

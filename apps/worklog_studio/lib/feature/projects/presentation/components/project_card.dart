@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:worklog_studio/domain/project.dart';
-import 'package:worklog_studio/feature/common/presentation/components/card_content.dart';
+import 'package:worklog_studio/domain/resolved_project.dart';
 import 'package:worklog_studio/feature/common/presentation/interactive_card.dart';
+import 'package:worklog_studio/feature/common/presentation/components/card_content.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 class ProjectCard extends StatelessWidget {
-  final Project project;
+  final ResolvedProject project;
   final bool isSelected;
   final VoidCallback onTap;
 
@@ -39,14 +40,14 @@ class ProjectCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              project.clientName,
+              project.project.clientName,
               style: theme.commonTextStyles.caption.copyWith(
                 color: palette.text.secondary,
               ),
             ),
             SizedBox(height: theme.spacings.s8),
             LinearProgressIndicator(
-              value: project.budgetUtilization,
+              value: project.project.budgetUtilization,
               backgroundColor: palette.border.primary,
               color: palette.accent.primary,
               minHeight: 4,
