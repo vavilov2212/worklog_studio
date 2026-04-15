@@ -291,7 +291,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                   });
                                   _projectFieldController.handleEditorCommit();
                                 },
-                                footerBuilder: (context, query, close) {
+                                actionBuilder: (context, query, close) {
                                   final exactMatchExists = state.projects.any(
                                     (p) =>
                                         p.name.toLowerCase() ==
@@ -363,7 +363,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                   });
                                   _taskFieldController.handleEditorCommit();
                                 },
-                                footerBuilder: (context, query, close) {
+                                actionBuilder: (context, query, close) {
                                   final exactMatchExists = state.tasks.any(
                                     (t) =>
                                         t.title.toLowerCase() ==

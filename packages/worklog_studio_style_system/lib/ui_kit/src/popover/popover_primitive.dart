@@ -60,6 +60,15 @@ class _PopoverPrimitiveState extends State<PopoverPrimitive> {
     if (widget.tapRegionGroupId != oldWidget.tapRegionGroupId) {
       _internalTapRegionGroupId = widget.tapRegionGroupId ?? Object();
     }
+
+    // Rebuild the overlay if the widget updates (e.g., contentBuilder changes)
+    if (_overlayEntry != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _overlayEntry != null) {
+          _overlayEntry!.markNeedsBuild();
+        }
+      });
+    }
   }
 
   @override

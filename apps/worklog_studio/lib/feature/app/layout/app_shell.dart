@@ -8,8 +8,6 @@ import 'package:worklog_studio/feature/tasks/presentation/tasks_page.dart';
 import 'package:worklog_studio/feature/history/presentation/history_page.dart';
 import 'package:worklog_studio/state/time_tracker_state.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
-import 'package:worklog_studio/domain/project.dart';
-import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/feature/home/data/mock_data.dart' as mock;
 
 enum AppRoute { dashboard, history, projects, tasks, settings }
@@ -317,7 +315,7 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
           placeholder: 'Select Project',
           searchable: true,
           options: options,
-          footerBuilder: (context, query, close) {
+          actionBuilder: (context, query, close) {
             final exactMatchExists = projectTaskState.projects.any(
               (p) => p.name.toLowerCase() == query.toLowerCase(),
             );
@@ -399,7 +397,7 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
           placeholder: 'Select Task',
           searchable: true,
           options: options,
-          footerBuilder: (context, query, close) {
+          actionBuilder: (context, query, close) {
             final exactMatchExists = projectTaskState.tasks.any(
               (t) =>
                   t.title.toLowerCase() == query.toLowerCase() &&

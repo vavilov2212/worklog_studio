@@ -289,7 +289,7 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                           _projectFieldController
                                               .handleEditorCommit();
                                         },
-                                        footerBuilder: (context, query, close) {
+                                        actionBuilder: (context, query, close) {
                                           final exactMatchExists = state
                                               .projects
                                               .any(

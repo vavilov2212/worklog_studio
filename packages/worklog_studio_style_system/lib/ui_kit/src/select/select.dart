@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../combobox/combobox.dart';
@@ -48,13 +49,13 @@ class Select<T> extends StatefulWidget {
   final ValueChanged<bool>? onOpenChange;
   final Object? tapRegionGroupId;
 
-  /// Builder for custom footer actions (e.g., "Create New")
+  /// Builder for custom actions (e.g., "Create New") at the top of the list
   final Widget Function(
     BuildContext context,
     String searchQuery,
     VoidCallback close,
   )?
-  footerBuilder;
+  actionBuilder;
 
   /// Builder for custom empty state
   final Widget Function(BuildContext context, String searchQuery)? emptyBuilder;
@@ -77,7 +78,7 @@ class Select<T> extends StatefulWidget {
     this.autoOpen = false,
     this.onOpenChange,
     this.tapRegionGroupId,
-    this.footerBuilder,
+    this.actionBuilder,
     this.emptyBuilder,
   }) : assert(
          !(value != null && defaultValue != null),
@@ -94,6 +95,7 @@ class _SelectState<T> extends State<Select<T>> {
 
   T? _internalValue;
   String _searchQuery = '';
+  Timer? _debounceTimer;
 
   bool get _isControlled => widget.value != null;
 
@@ -113,11 +115,7 @@ class _SelectState<T> extends State<Select<T>> {
       _internalValue = widget.defaultValue;
     }
 
-    _searchController.addListener(() {
-      setState(() {
-        _searchQuery = _searchController.text;
-      });
-    });
+    _searchController.addListener(_onSearchChanged);
 
     _controller.addListener(_handleOpenChange);
 
@@ -137,6 +135,22 @@ class _SelectState<T> extends State<Select<T>> {
         }
       });
     }
+  }
+
+  void _onSearchChanged() {
+    if (_debounceTimer?.isActive ?? false) {
+      _debounceTimer!.cancel();
+    }
+
+    // 300ms is a standard debounce duration. It's long enough to catch a burst
+    // of typing without feeling sluggish, and short enough to feel responsive.
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (mounted && _searchQuery != _searchController.text) {
+        setState(() {
+          _searchQuery = _searchController.text;
+        });
+      }
+    });
   }
 
   void _handleOpenChange() {
@@ -171,6 +185,7 @@ class _SelectState<T> extends State<Select<T>> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _controller.removeListener(_handleOpenChange);
     if (widget.controller == null) {
       _controller.dispose();
@@ -187,19 +202,6 @@ class _SelectState<T> extends State<Select<T>> {
 
     widget.onChanged?.call(value);
     _controller.close();
-  }
-
-  List<SelectOption<T>> get _filteredOptions {
-    if (!widget.searchable || _searchQuery.isEmpty) {
-      return widget.options;
-    }
-
-    return widget.options
-        .where(
-          (option) =>
-              option.label.toLowerCase().contains(_searchQuery.toLowerCase()),
-        )
-        .toList();
   }
 
   @override
@@ -230,15 +232,15 @@ class _SelectState<T> extends State<Select<T>> {
         return SelectContent<T>(
           searchable: widget.searchable,
           searchController: _searchController,
-          options: _filteredOptions,
+          options: widget.options,
           selectedValue: _currentValue,
           onSelect: (value) {
             _handleSelect(value);
             close();
           },
           searchQuery: _searchQuery,
-          footerBuilder: widget.footerBuilder != null
-              ? (context, query) => widget.footerBuilder!(context, query, close)
+          actionBuilder: widget.actionBuilder != null
+              ? (context, query) => widget.actionBuilder!(context, query, close)
               : null,
           emptyBuilder: widget.emptyBuilder,
         );
