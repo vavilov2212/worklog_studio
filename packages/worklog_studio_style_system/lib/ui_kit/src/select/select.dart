@@ -48,6 +48,17 @@ class Select<T> extends StatefulWidget {
   final ValueChanged<bool>? onOpenChange;
   final Object? tapRegionGroupId;
 
+  /// Builder for custom footer actions (e.g., "Create New")
+  final Widget Function(
+    BuildContext context,
+    String searchQuery,
+    VoidCallback close,
+  )?
+  footerBuilder;
+
+  /// Builder for custom empty state
+  final Widget Function(BuildContext context, String searchQuery)? emptyBuilder;
+
   const Select({
     super.key,
     this.value,
@@ -66,6 +77,8 @@ class Select<T> extends StatefulWidget {
     this.autoOpen = false,
     this.onOpenChange,
     this.tapRegionGroupId,
+    this.footerBuilder,
+    this.emptyBuilder,
   }) : assert(
          !(value != null && defaultValue != null),
          'Select cannot be both controlled and uncontrolled.',
@@ -116,6 +129,9 @@ class _SelectState<T> extends State<Select<T>> {
 
   void _handleOpenChange() {
     widget.onOpenChange?.call(_controller.isOpen);
+    if (!_controller.isOpen) {
+      _searchController.clear();
+    }
   }
 
   @override
@@ -201,6 +217,11 @@ class _SelectState<T> extends State<Select<T>> {
             _handleSelect(value);
             close();
           },
+          searchQuery: _searchQuery,
+          footerBuilder: widget.footerBuilder != null
+              ? (context, query) => widget.footerBuilder!(context, query, close)
+              : null,
+          emptyBuilder: widget.emptyBuilder,
         );
       },
     );

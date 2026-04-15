@@ -270,6 +270,7 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                       controller: _projectFieldController,
                                       editWidget: Select<String>(
                                         autoOpen: true,
+                                        searchable: true,
                                         tapRegionGroupId:
                                             _projectFieldController
                                                 .tapRegionGroupId,
@@ -287,6 +288,40 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                           });
                                           _projectFieldController
                                               .handleEditorCommit();
+                                        },
+                                        footerBuilder: (context, query, close) {
+                                          final exactMatchExists = state
+                                              .projects
+                                              .any(
+                                                (p) =>
+                                                    p.name.toLowerCase() ==
+                                                    query.toLowerCase(),
+                                              );
+                                          if (exactMatchExists &&
+                                              query.isNotEmpty)
+                                            return const SizedBox.shrink();
+
+                                          return SelectCreateAction(
+                                            label: query.isEmpty
+                                                ? 'Create new project'
+                                                : 'Create project "$query"',
+                                            onTap: () async {
+                                              final newProject = await state
+                                                  .createProject(
+                                                    query.isEmpty
+                                                        ? 'New project'
+                                                        : query,
+                                                    '',
+                                                  );
+                                              setState(() {
+                                                _selectedProjectId =
+                                                    newProject.id;
+                                              });
+                                              _projectFieldController
+                                                  .handleEditorCommit();
+                                              close();
+                                            },
+                                          );
                                         },
                                         options: state.projects.map((p) {
                                           return SelectOption(

@@ -297,12 +297,9 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
     final palette = theme.colorsPalette;
     final projectTaskState = context.watch<ProjectTaskState>();
 
-    final options = [
-      SelectOption(value: 'create_new', label: '+ Create Project'),
-      ...projectTaskState.projects.map(
-        (p) => SelectOption(value: p.id, label: p.name),
-      ),
-    ];
+    final options = projectTaskState.projects
+        .map((p) => SelectOption(value: p.id, label: p.name))
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -320,14 +317,22 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
           placeholder: 'Select Project',
           searchable: true,
           options: options,
-          onChanged: (value) async {
-            if (value == 'create_new') {
-              // Trigger creation flow
-              final newProject = await _showCreateProjectDialog(
-                context,
-                projectTaskState,
-              );
-              if (newProject != null) {
+          footerBuilder: (context, query, close) {
+            final exactMatchExists = projectTaskState.projects.any(
+              (p) => p.name.toLowerCase() == query.toLowerCase(),
+            );
+            if (exactMatchExists && query.isNotEmpty)
+              return const SizedBox.shrink();
+
+            return SelectCreateAction(
+              label: query.isEmpty
+                  ? 'Create new project'
+                  : 'Create project "$query"',
+              onTap: () async {
+                final newProject = await projectTaskState.createProject(
+                  query.isEmpty ? 'New project' : query,
+                  '',
+                );
                 setState(() {
                   _selectedProjectId = newProject.id;
                 });
@@ -338,10 +343,11 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
                     comment: _commentController.text,
                   );
                 }
-              }
-              return;
-            }
-
+                close();
+              },
+            );
+          },
+          onChanged: (value) async {
             setState(() {
               _selectedProjectId = value;
             });
@@ -438,10 +444,9 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
               .toList()
         : projectTaskState.tasks;
 
-    final options = [
-      SelectOption(value: 'create_new', label: '+ Create Task'),
-      ...filteredTasks.map((t) => SelectOption(value: t.id, label: t.title)),
-    ];
+    final options = filteredTasks
+        .map((t) => SelectOption(value: t.id, label: t.title))
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -459,24 +464,31 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
           placeholder: 'Select Task',
           searchable: true,
           options: options,
-          onChanged: (value) async {
-            if (value == 'create_new') {
-              if (_selectedProjectId == null) {
-                // Cannot create task without project
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Please select a project first'),
-                  ),
+          footerBuilder: (context, query, close) {
+            final exactMatchExists = projectTaskState.tasks.any(
+              (t) =>
+                  t.title.toLowerCase() == query.toLowerCase() &&
+                  t.projectId == _selectedProjectId,
+            );
+            if (exactMatchExists && query.isNotEmpty)
+              return const SizedBox.shrink();
+
+            return SelectCreateAction(
+              label: query.isEmpty ? 'Create new task' : 'Create task "$query"',
+              onTap: () async {
+                if (_selectedProjectId == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please select a project first'),
+                    ),
+                  );
+                  return;
+                }
+                final newTask = await projectTaskState.createTask(
+                  _selectedProjectId!,
+                  query.isEmpty ? 'New task' : query,
+                  '',
                 );
-                return;
-              }
-              // Trigger creation flow
-              final newTask = await _showCreateTaskDialog(
-                context,
-                projectTaskState,
-                _selectedProjectId!,
-              );
-              if (newTask != null) {
                 setState(() {
                   _selectedTaskId = newTask.id;
                 });
@@ -487,10 +499,11 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
                     comment: _commentController.text,
                   );
                 }
-              }
-              return;
-            }
-
+                close();
+              },
+            );
+          },
+          onChanged: (value) async {
             setState(() {
               _selectedTaskId = value;
             });
@@ -550,98 +563,6 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
           },
         ),
       ],
-    );
-  }
-
-  Future<Project?> _showCreateProjectDialog(
-    BuildContext context,
-    ProjectTaskState state,
-  ) async {
-    final nameController = TextEditingController();
-    final descController = TextEditingController();
-    return showDialog<Project>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Create Project'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: 'Name'),
-            ),
-            TextField(
-              controller: descController,
-              decoration: const InputDecoration(labelText: 'Description'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              if (nameController.text.isNotEmpty) {
-                final project = await state.createProject(
-                  nameController.text,
-                  descController.text,
-                );
-                Navigator.pop(context, project);
-              }
-            },
-            child: const Text('Create'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<Task?> _showCreateTaskDialog(
-    BuildContext context,
-    ProjectTaskState state,
-    String projectId,
-  ) async {
-    final titleController = TextEditingController();
-    final descController = TextEditingController();
-    return showDialog<Task>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Create Task'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titleController,
-              decoration: const InputDecoration(labelText: 'Title'),
-            ),
-            TextField(
-              controller: descController,
-              decoration: const InputDecoration(labelText: 'Description'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              if (titleController.text.isNotEmpty) {
-                final task = await state.createTask(
-                  projectId,
-                  titleController.text,
-                  descController.text,
-                );
-                Navigator.pop(context, task);
-              }
-            },
-            child: const Text('Create'),
-          ),
-        ],
-      ),
     );
   }
 

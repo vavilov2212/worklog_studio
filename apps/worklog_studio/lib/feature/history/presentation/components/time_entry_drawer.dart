@@ -111,7 +111,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
       status: entry.status,
     );
 
-    if (_isNew) {
+    if (widget.isNew) {
       await state.createEntry(updatedEntry);
     } else {
       await state.updateEntry(updatedEntry);
@@ -274,6 +274,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                               controller: _projectFieldController,
                               editWidget: Select<String>(
                                 autoOpen: true,
+                                searchable: true,
                                 tapRegionGroupId:
                                     _projectFieldController.tapRegionGroupId,
                                 onOpenChange: (isOpen) {
@@ -289,6 +290,37 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                     _selectedTaskId = null;
                                   });
                                   _projectFieldController.handleEditorCommit();
+                                },
+                                footerBuilder: (context, query, close) {
+                                  final exactMatchExists = state.projects.any(
+                                    (p) =>
+                                        p.name.toLowerCase() ==
+                                        query.toLowerCase(),
+                                  );
+                                  if (exactMatchExists && query.isNotEmpty)
+                                    return const SizedBox.shrink();
+
+                                  return SelectCreateAction(
+                                    label: query.isEmpty
+                                        ? 'Create new project'
+                                        : 'Create project "$query"',
+                                    onTap: () async {
+                                      final newProject = await state
+                                          .createProject(
+                                            query.isEmpty
+                                                ? 'New project'
+                                                : query,
+                                            '',
+                                          );
+                                      setState(() {
+                                        _selectedProjectId = newProject.id;
+                                        _selectedTaskId = null;
+                                      });
+                                      _projectFieldController
+                                          .handleEditorCommit();
+                                      close();
+                                    },
+                                  );
                                 },
                                 options: state.projects.map((p) {
                                   return SelectOption(
@@ -315,6 +347,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                               controller: _taskFieldController,
                               editWidget: Select<String>(
                                 autoOpen: true,
+                                searchable: true,
                                 tapRegionGroupId:
                                     _taskFieldController.tapRegionGroupId,
                                 onOpenChange: (isOpen) {
@@ -329,6 +362,35 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                     _selectedTaskId = value;
                                   });
                                   _taskFieldController.handleEditorCommit();
+                                },
+                                footerBuilder: (context, query, close) {
+                                  final exactMatchExists = state.tasks.any(
+                                    (t) =>
+                                        t.title.toLowerCase() ==
+                                            query.toLowerCase() &&
+                                        t.projectId == _selectedProjectId,
+                                  );
+                                  if (exactMatchExists && query.isNotEmpty)
+                                    return const SizedBox.shrink();
+
+                                  return SelectCreateAction(
+                                    label: query.isEmpty
+                                        ? 'Create new task'
+                                        : 'Create task "$query"',
+                                    onTap: () async {
+                                      if (_selectedProjectId == null) return;
+                                      final newTask = await state.createTask(
+                                        _selectedProjectId!,
+                                        query.isEmpty ? 'New task' : query,
+                                        '',
+                                      );
+                                      setState(() {
+                                        _selectedTaskId = newTask.id;
+                                      });
+                                      _taskFieldController.handleEditorCommit();
+                                      close();
+                                    },
+                                  );
                                 },
                                 options: state.tasks
                                     .where(
