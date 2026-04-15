@@ -1,3 +1,4 @@
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:l/l.dart';
 import 'package:provider/provider.dart';
@@ -14,8 +15,8 @@ import 'package:worklog_studio/data/system_clock.dart';
 import 'package:worklog_studio/feature/app/layout/app_bar/app_bar_scope.dart';
 import 'package:worklog_studio/feature/app/layout/app_shell.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
-import 'package:worklog_studio/state/time_tracker_state.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
+import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
 import 'package:worklog_studio_style_system/ui_kit/src/drawer/drawer_service.dart';
 
 import 'layout/app_bar/app_bar_navigator_observer.dart';
@@ -28,7 +29,7 @@ class App extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MultiProvider(
     providers: [
-      ChangeNotifierProvider(
+      BlocProvider<TimeTrackerBloc>(
         create: (_) {
           final clock = SystemClock();
           final repository = SqliteTimeEntryRepository();
@@ -36,7 +37,7 @@ class App extends StatelessWidget {
             repository: repository,
             clock: clock,
           );
-          return TimeTrackerState(service: service, clock: clock);
+          return TimeTrackerBloc(service: service)..add(TimeTrackerLoaded());
         },
       ),
       ChangeNotifierProvider(
@@ -52,16 +53,16 @@ class App extends StatelessWidget {
         },
       ),
       ChangeNotifierProxyProvider2<
-        TimeTrackerState,
+        TimeTrackerBloc,
         ProjectTaskState,
         EntityResolver
       >(
         create: (context) => EntityResolver(
-          timeTrackerState: context.read<TimeTrackerState>(),
+          bloc: context.read<TimeTrackerBloc>(),
           projectTaskState: context.read<ProjectTaskState>(),
         ),
-        update: (context, timeTrackerState, projectTaskState, resolver) {
-          return resolver!..update(timeTrackerState, projectTaskState);
+        update: (context, bloc, projectTaskState, resolver) {
+          return resolver!..update(bloc, projectTaskState);
         },
       ),
     ],

@@ -5,7 +5,7 @@ import 'package:worklog_studio/feature/common/presentation/components/drawer_hea
 import 'package:worklog_studio/feature/common/presentation/components/inline_field_controller.dart';
 import 'package:worklog_studio/feature/common/presentation/resizable_drawer.dart';
 import 'package:worklog_studio/feature/common/presentation/components/inline_field.dart';
-import 'package:worklog_studio/state/time_tracker_state.dart';
+import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/domain/resolved_time_entry.dart';
@@ -93,7 +93,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
   void _handleSave() async {
     if (widget.resolvedEntry == null) return;
 
-    final state = context.read<TimeTrackerState>();
+    final bloc = context.read<TimeTrackerBloc>();
     final entry = widget.resolvedEntry!.entry;
 
     final startAt = _parseTimeInput(_startTimeController.text, entry.startAt);
@@ -112,9 +112,9 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
     );
 
     if (widget.isNew) {
-      await state.createEntry(updatedEntry);
+      bloc.add(TimeTrackerEntryCreated(updatedEntry));
     } else {
-      await state.updateEntry(updatedEntry);
+      bloc.add(TimeTrackerEntryUpdated(updatedEntry));
     }
 
     widget.onClose();
@@ -214,11 +214,11 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                 PrimaryButton(
                                   onTap: () {
                                     if (widget.resolvedEntry != null) {
-                                      context
-                                          .read<TimeTrackerState>()
-                                          .deleteEntry(
-                                            widget.resolvedEntry!.entry.id,
-                                          );
+                                      context.read<TimeTrackerBloc>().add(
+                                        TimeTrackerEntryDeleted(
+                                          widget.resolvedEntry!.entry.id,
+                                        ),
+                                      );
                                       widget.onClose();
                                     }
                                   },

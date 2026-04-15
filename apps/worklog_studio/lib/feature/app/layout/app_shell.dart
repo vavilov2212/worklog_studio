@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:worklog_studio/feature/settings/settings_screen.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/feature/home/presentation/home_page.dart';
 import 'package:worklog_studio/feature/projects/presentation/projects_page.dart';
 import 'package:worklog_studio/feature/tasks/presentation/tasks_page.dart';
 import 'package:worklog_studio/feature/history/presentation/history_page.dart';
-import 'package:worklog_studio/state/time_tracker_state.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
+import 'package:worklog_studio/feature/time_tracker/presentation/components/active_timer_text.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
 import 'package:worklog_studio/feature/home/data/mock_data.dart' as mock;
 
@@ -155,142 +156,154 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
   Widget build(BuildContext context) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
-    final state = context.watch<TimeTrackerState>();
 
-    final isRunning = state.isRunning;
-    final activeEntry = state.activeEntry;
+    return BlocListener<TimeTrackerBloc, TimeTrackerBlocState>(
+      listenWhen: (previous, current) =>
+          previous.activeEntryOrNull != current.activeEntryOrNull,
+      listener: (context, state) {
+        final activeEntry = state.activeEntryOrNull;
+        if (activeEntry != null) {
+          if (_selectedProjectId != activeEntry.projectId) {
+            setState(() => _selectedProjectId = activeEntry.projectId);
+          }
+          if (_selectedTaskId != activeEntry.taskId) {
+            setState(() => _selectedTaskId = activeEntry.taskId);
+          }
+          if (_commentController.text != (activeEntry.comment ?? '')) {
+            _commentController.text = activeEntry.comment ?? '';
+          }
+        }
+      },
+      child: BlocBuilder<TimeTrackerBloc, TimeTrackerBlocState>(
+        buildWhen: (previous, current) =>
+            previous.isRunning != current.isRunning ||
+            previous.activeEntryOrNull != current.activeEntryOrNull,
+        builder: (context, state) {
+          final isRunning = state.isRunning;
 
-    // Sync local state with active entry if running
-    if (isRunning && activeEntry != null) {
-      if (_selectedProjectId != activeEntry.projectId) {
-        _selectedProjectId = activeEntry.projectId;
-      }
-      if (_selectedTaskId != activeEntry.taskId) {
-        _selectedTaskId = activeEntry.taskId;
-      }
-      if (_commentController.text != (activeEntry.comment ?? '')) {
-        _commentController.text = activeEntry.comment ?? '';
-      }
-    }
-
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: theme.spacings.s24,
-        vertical: theme.spacings.s16,
-      ),
-      decoration: BoxDecoration(
-        color: palette.background.surface,
-        borderRadius: theme.radiuses.lg.circular,
-        border: Border.all(
-          color: isRunning ? palette.accent.primary : palette.border.primary,
-          width: isRunning ? 2 : 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Expanded(
-            flex: 2,
-            child: _buildProjectSelector(context, isRunning, state),
-          ),
-          SizedBox(width: theme.spacings.s16),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: Container(
-              width: 1,
-              height: 32,
-              color: palette.border.primary,
+          return Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: theme.spacings.s24,
+              vertical: theme.spacings.s16,
             ),
-          ),
-          SizedBox(width: theme.spacings.s16),
-          Expanded(
-            flex: 2,
-            child: _buildTaskSelector(context, isRunning, state),
-          ),
-          SizedBox(width: theme.spacings.s16),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: Container(
-              width: 1,
-              height: 32,
-              color: palette.border.primary,
-            ),
-          ),
-          SizedBox(width: theme.spacings.s16),
-          Expanded(
-            flex: 4,
-            child: _buildCommentInput(context, isRunning, state),
-          ),
-          SizedBox(width: theme.spacings.s24),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(' ', style: theme.commonTextStyles.caption3Bold),
-              SizedBox(height: theme.spacings.s8),
-              Text(
-                _formatDuration(state.elapsed),
-                style: theme.commonTextStyles.h1.copyWith(
-                  color: isRunning
-                      ? palette.accent.primary
-                      : palette.text.muted,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
+            decoration: BoxDecoration(
+              color: palette.background.surface,
+              borderRadius: theme.radiuses.lg.circular,
+              border: Border.all(
+                color: isRunning
+                    ? palette.accent.primary
+                    : palette.border.primary,
+                width: isRunning ? 2 : 1,
               ),
-            ],
-          ),
-          SizedBox(width: theme.spacings.s24),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(' ', style: theme.commonTextStyles.caption3Bold),
-              SizedBox(height: theme.spacings.s8),
-              isRunning
-                  ? PrimaryButton(
-                      title: 'STOP',
-                      leftIcon: WorklogStudioAssets.vectors.square24Svg,
-                      backgroundColor: palette.accent.danger,
-                      onTap: () {
-                        state.stop();
-                        setState(() {
-                          _selectedProjectId = null;
-                          _selectedTaskId = null;
-                          _commentController.clear();
-                        });
-                      },
-                    )
-                  : PrimaryButton(
-                      title: 'START',
-                      leftIcon: WorklogStudioAssets.vectors.playerPlay24Svg,
-                      onTap: () {
-                        state.start(
-                          projectId: _selectedProjectId,
-                          taskId: _selectedTaskId,
-                          comment: _commentController.text.isNotEmpty
-                              ? _commentController.text
-                              : null,
-                        );
-                      },
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: _buildProjectSelector(context, isRunning),
+                ),
+                SizedBox(width: theme.spacings.s16),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Container(
+                    width: 1,
+                    height: 32,
+                    color: palette.border.primary,
+                  ),
+                ),
+                SizedBox(width: theme.spacings.s16),
+                Expanded(
+                  flex: 2,
+                  child: _buildTaskSelector(context, isRunning),
+                ),
+                SizedBox(width: theme.spacings.s16),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Container(
+                    width: 1,
+                    height: 32,
+                    color: palette.border.primary,
+                  ),
+                ),
+                SizedBox(width: theme.spacings.s16),
+                Expanded(
+                  flex: 4,
+                  child: _buildCommentInput(context, isRunning),
+                ),
+                SizedBox(width: theme.spacings.s24),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(' ', style: theme.commonTextStyles.caption3Bold),
+                    SizedBox(height: theme.spacings.s8),
+                    ActiveTimerText(
+                      style: theme.commonTextStyles.h1.copyWith(
+                        color: isRunning
+                            ? palette.accent.primary
+                            : palette.text.muted,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
                     ),
-            ],
-          ),
-        ],
+                  ],
+                ),
+                SizedBox(width: theme.spacings.s24),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(' ', style: theme.commonTextStyles.caption3Bold),
+                    SizedBox(height: theme.spacings.s8),
+                    isRunning
+                        ? PrimaryButton(
+                            title: 'STOP',
+                            leftIcon: WorklogStudioAssets.vectors.square24Svg,
+                            backgroundColor: palette.accent.danger,
+                            onTap: () {
+                              context.read<TimeTrackerBloc>().add(
+                                TimeTrackerStopped(),
+                              );
+                              setState(() {
+                                _selectedProjectId = null;
+                                _selectedTaskId = null;
+                                _commentController.clear();
+                              });
+                            },
+                          )
+                        : PrimaryButton(
+                            title: 'START',
+                            leftIcon:
+                                WorklogStudioAssets.vectors.playerPlay24Svg,
+                            onTap: () {
+                              context.read<TimeTrackerBloc>().add(
+                                TimeTrackerStarted(
+                                  projectId: _selectedProjectId,
+                                  taskId: _selectedTaskId,
+                                  comment: _commentController.text.isNotEmpty
+                                      ? _commentController.text
+                                      : null,
+                                ),
+                              );
+                            },
+                          ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildProjectSelector(
-    BuildContext context,
-    bool isRunning,
-    TimeTrackerState state,
-  ) {
+  Widget _buildProjectSelector(BuildContext context, bool isRunning) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
     final projectTaskState = context.watch<ProjectTaskState>();
@@ -335,10 +348,12 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
                   _selectedProjectId = newProject.id;
                 });
                 if (isRunning) {
-                  state.updateActive(
-                    projectId: newProject.id,
-                    taskId: _selectedTaskId,
-                    comment: _commentController.text,
+                  context.read<TimeTrackerBloc>().add(
+                    TimeTrackerActiveEntryUpdated(
+                      projectId: newProject.id,
+                      taskId: _selectedTaskId,
+                      comment: _commentController.text,
+                    ),
                   );
                 }
                 close();
@@ -350,10 +365,12 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
               _selectedProjectId = value;
             });
             if (isRunning) {
-              state.updateActive(
-                projectId: value,
-                taskId: _selectedTaskId,
-                comment: _commentController.text,
+              context.read<TimeTrackerBloc>().add(
+                TimeTrackerActiveEntryUpdated(
+                  projectId: value,
+                  taskId: _selectedTaskId,
+                  comment: _commentController.text,
+                ),
               );
             }
           },
@@ -362,11 +379,7 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
     );
   }
 
-  Widget _buildTaskSelector(
-    BuildContext context,
-    bool isRunning,
-    TimeTrackerState state,
-  ) {
+  Widget _buildTaskSelector(BuildContext context, bool isRunning) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
     final projectTaskState = context.watch<ProjectTaskState>();
@@ -426,10 +439,12 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
                   _selectedTaskId = newTask.id;
                 });
                 if (isRunning) {
-                  state.updateActive(
-                    projectId: _selectedProjectId,
-                    taskId: newTask.id,
-                    comment: _commentController.text,
+                  context.read<TimeTrackerBloc>().add(
+                    TimeTrackerActiveEntryUpdated(
+                      projectId: _selectedProjectId,
+                      taskId: newTask.id,
+                      comment: _commentController.text,
+                    ),
                   );
                 }
                 close();
@@ -441,10 +456,12 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
               _selectedTaskId = value;
             });
             if (isRunning) {
-              state.updateActive(
-                projectId: _selectedProjectId,
-                taskId: value,
-                comment: _commentController.text,
+              context.read<TimeTrackerBloc>().add(
+                TimeTrackerActiveEntryUpdated(
+                  projectId: _selectedProjectId,
+                  taskId: value,
+                  comment: _commentController.text,
+                ),
               );
             }
           },
@@ -453,11 +470,7 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
     );
   }
 
-  Widget _buildCommentInput(
-    BuildContext context,
-    bool isRunning,
-    TimeTrackerState state,
-  ) {
+  Widget _buildCommentInput(BuildContext context, bool isRunning) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
 
@@ -508,10 +521,12 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
               onClose: () => _commentPopoverController.hide(),
               onSubmitted: (value) {
                 if (isRunning) {
-                  state.updateActive(
-                    projectId: _selectedProjectId,
-                    taskId: _selectedTaskId,
-                    comment: value,
+                  context.read<TimeTrackerBloc>().add(
+                    TimeTrackerActiveEntryUpdated(
+                      projectId: _selectedProjectId,
+                      taskId: _selectedTaskId,
+                      comment: value,
+                    ),
                   );
                 }
               },

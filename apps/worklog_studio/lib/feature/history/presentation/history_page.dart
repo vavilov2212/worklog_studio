@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:collection/collection.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
 import 'package:worklog_studio/domain/resolved_time_entry.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
-import 'package:worklog_studio/state/time_tracker_state.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
 import 'components/time_entry_card.dart';
 import 'components/time_entry_drawer.dart';
@@ -49,54 +49,60 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final resolver = context.watch<EntityResolver>();
+    return Selector<EntityResolver, List<ResolvedTimeEntry>>(
+      selector: (context, resolver) => resolver.getResolvedTimeEntries(),
+      shouldRebuild: (prev, next) => !const ListEquality().equals(prev, next),
+      builder: (context, resolvedEntries, child) {
+        ResolvedTimeEntry? resolvedSelectedEntry;
 
-    ResolvedTimeEntry? resolvedSelectedEntry;
+        if (selectedEntry != null) {
+          resolvedSelectedEntry = resolvedEntries.firstWhereOrNull(
+            (e) => e.entry.id == selectedEntry!.id,
+          );
 
-    if (selectedEntry != null) {
-      resolvedSelectedEntry = resolver.getResolvedTimeEntry(selectedEntry!.id);
+          // If it's a new entry (not yet in state), we resolve it manually
+          if (resolvedSelectedEntry == null && selectedEntry!.id.isEmpty) {
+            final projectTaskState = context.read<ProjectTaskState>();
+            final task = selectedEntry!.taskId != null
+                ? projectTaskState.tasks
+                      .where((t) => t.id == selectedEntry!.taskId)
+                      .firstOrNull
+                : null;
+            final project = selectedEntry!.projectId != null
+                ? projectTaskState.projects
+                      .where((p) => p.id == selectedEntry!.projectId)
+                      .firstOrNull
+                : null;
 
-      // If it's a new entry (not yet in state), we resolve it manually
-      if (resolvedSelectedEntry == null && selectedEntry!.id.isEmpty) {
-        final projectTaskState = context.read<ProjectTaskState>();
-        final task = selectedEntry!.taskId != null
-            ? projectTaskState.tasks
-                  .where((t) => t.id == selectedEntry!.taskId)
-                  .firstOrNull
-            : null;
-        final project = selectedEntry!.projectId != null
-            ? projectTaskState.projects
-                  .where((p) => p.id == selectedEntry!.projectId)
-                  .firstOrNull
-            : null;
+            resolvedSelectedEntry = ResolvedTimeEntry(
+              entry: selectedEntry!,
+              task: task,
+              project: project,
+            );
+          }
+        }
 
-        resolvedSelectedEntry = ResolvedTimeEntry(
-          entry: selectedEntry!,
-          task: task,
-          project: project,
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Main Content Area (Shrinks when panel opens)
+            Expanded(
+              child: TimeEntryList(
+                entries: resolvedEntries,
+                selectedEntry: selectedEntry,
+                onEntrySelected: _handleEntrySelected,
+                onCreateEntry: _handleCreateEntry,
+              ),
+            ),
+            TimeEntryDrawer(
+              resolvedEntry: resolvedSelectedEntry,
+              isOpen: resolvedSelectedEntry != null,
+              onClose: _closePanel,
+              isNew: selectedEntry != null && selectedEntry!.id.isEmpty,
+            ),
+          ],
         );
-      }
-    }
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Main Content Area (Shrinks when panel opens)
-        Expanded(
-          child: TimeEntryList(
-            entries: resolver.getResolvedTimeEntries(),
-            selectedEntry: selectedEntry,
-            onEntrySelected: _handleEntrySelected,
-            onCreateEntry: _handleCreateEntry,
-          ),
-        ),
-        TimeEntryDrawer(
-          resolvedEntry: resolvedSelectedEntry,
-          isOpen: resolvedSelectedEntry != null,
-          onClose: _closePanel,
-          isNew: selectedEntry != null && selectedEntry!.id.isEmpty,
-        ),
-      ],
+      },
     );
   }
 }
