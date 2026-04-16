@@ -18,17 +18,32 @@ import 'package:worklog_studio/feature/app/layout/app_bar/app_bar_service.dart';
 import 'package:worklog_studio/firebase_options.dart';
 import 'package:worklog_studio_style_system/ui_kit/ui_kit.dart';
 
-Future<void> run() async {
+import 'dart:convert';
+
+import 'package:desktop_multi_window/desktop_multi_window.dart';
+import 'package:worklog_studio/feature/desktop/presentation/mini_app.dart';
+
+Future<void> run(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (args.isNotEmpty && args.first == 'multi_window') {
+    final windowId = int.parse(args[1]);
+    final argument = args[2].isEmpty
+        ? const <String, dynamic>{}
+        : jsonDecode(args[2]) as Map<String, dynamic>;
+
+    runApp(MiniApp(windowId: windowId, argument: argument));
+    return;
+  }
+
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // 🔑 ВАЖНО: для desktop / VM
-  if (!kIsWeb) {
-    if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
-      sqfliteFfiInit();
-      databaseFactory = databaseFactoryFfi;
-    }
+  if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
   }
+
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(statusBarColor: Colors.transparent),

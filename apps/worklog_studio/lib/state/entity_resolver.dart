@@ -126,4 +126,21 @@ class EntityResolver extends ChangeNotifier {
   List<ResolvedProject> getResolvedProjects() {
     return _projectTaskState.projects.map(_resolveProject).toList();
   }
+  // --- Simple Name Helpers (for lightweight UI like MiniPanel) ---
+
+  String getProjectName(String? projectId) {
+    if (projectId == null) return 'No Project';
+    final project = _projectTaskState.projects.firstWhereOrNull(
+      (p) => p.id == projectId,
+    );
+    return project?.name ?? 'No Project';
+  }
+
+  String getTaskName(String? taskId) {
+    if (taskId == null) return 'No Task';
+    final task = _projectTaskState.tasks.firstWhereOrNull(
+      (t) => t.id == taskId,
+    );
+    return task?.title ?? 'No Task';
+  }
 }

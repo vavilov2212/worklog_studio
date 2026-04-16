@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:worklog_studio/domain/project.dart';
+import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/feature/settings/settings_screen.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/feature/home/presentation/home_page.dart';
@@ -132,8 +134,6 @@ class GlobalTimeTrackerPanel extends StatefulWidget {
 }
 
 class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
-  String? _selectedProjectId;
-  String? _selectedTaskId;
   final TextEditingController _commentController = TextEditingController();
   final PopoverController _commentPopoverController = PopoverController();
 
@@ -156,6 +156,7 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
   Widget build(BuildContext context) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
+    final projectTaskState = context.read<ProjectTaskState>();
 
     return BlocListener<TimeTrackerBloc, TimeTrackerBlocState>(
       listenWhen: (previous, current) =>
@@ -163,12 +164,11 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
       listener: (context, state) {
         final activeEntry = state.activeEntryOrNull;
         if (activeEntry != null) {
-          if (_selectedProjectId != activeEntry.projectId) {
-            setState(() => _selectedProjectId = activeEntry.projectId);
-          }
-          if (_selectedTaskId != activeEntry.taskId) {
-            setState(() => _selectedTaskId = activeEntry.taskId);
-          }
+          projectTaskState.updateDraft(
+            projectId: activeEntry.projectId,
+            taskId: activeEntry.taskId,
+            comment: activeEntry.comment ?? '',
+          );
           if (_commentController.text != (activeEntry.comment ?? '')) {
             _commentController.text = activeEntry.comment ?? '';
           }
@@ -180,6 +180,12 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
             previous.activeEntryOrNull != current.activeEntryOrNull,
         builder: (context, state) {
           final isRunning = state.isRunning;
+          final draftProjectId = context.select<ProjectTaskState, String?>(
+            (s) => s.draftProjectId,
+          );
+          final draftTaskId = context.select<ProjectTaskState, String?>(
+            (s) => s.draftTaskId,
+          );
 
           return Container(
             padding: EdgeInsets.symmetric(
@@ -208,7 +214,11 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
               children: [
                 Expanded(
                   flex: 2,
-                  child: _buildProjectSelector(context, isRunning),
+                  child: _buildProjectSelector(
+                    context,
+                    isRunning,
+                    draftProjectId,
+                  ),
                 ),
                 SizedBox(width: theme.spacings.s16),
                 Padding(
@@ -222,7 +232,7 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
                 SizedBox(width: theme.spacings.s16),
                 Expanded(
                   flex: 2,
-                  child: _buildTaskSelector(context, isRunning),
+                  child: _buildTaskSelector(context, isRunning, draftTaskId),
                 ),
                 SizedBox(width: theme.spacings.s16),
                 Padding(
@@ -236,7 +246,7 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
                 SizedBox(width: theme.spacings.s16),
                 Expanded(
                   flex: 4,
-                  child: _buildCommentInput(context, isRunning),
+                  child: _buildCommentInput(context, isRunning, draftTaskId),
                 ),
                 SizedBox(width: theme.spacings.s24),
                 Column(
@@ -270,11 +280,8 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
                               context.read<TimeTrackerBloc>().add(
                                 TimeTrackerStopped(),
                               );
-                              setState(() {
-                                _selectedProjectId = null;
-                                _selectedTaskId = null;
-                                _commentController.clear();
-                              });
+                              projectTaskState.clearDraft();
+                              _commentController.clear();
                             },
                           )
                         : PrimaryButton(
@@ -284,8 +291,8 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
                             onTap: () {
                               context.read<TimeTrackerBloc>().add(
                                 TimeTrackerStarted(
-                                  projectId: _selectedProjectId,
-                                  taskId: _selectedTaskId,
+                                  projectId: draftProjectId,
+                                  taskId: draftTaskId,
                                   comment: _commentController.text.isNotEmpty
                                       ? _commentController.text
                                       : null,
@@ -303,12 +310,19 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
     );
   }
 
-  Widget _buildProjectSelector(BuildContext context, bool isRunning) {
+  Widget _buildProjectSelector(
+    BuildContext context,
+    bool isRunning,
+    String? selectedId,
+  ) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
-    final projectTaskState = context.watch<ProjectTaskState>();
+    final projectTaskState = context.read<ProjectTaskState>();
+    final projects = context.select<ProjectTaskState, List<Project>>(
+      (s) => s.projects,
+    );
 
-    final options = projectTaskState.projects
+    final options = projects
         .map((p) => SelectOption(value: p.id, label: p.name))
         .toList();
 
@@ -324,12 +338,12 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
         ),
         SizedBox(height: theme.spacings.s8),
         Select<String>(
-          value: _selectedProjectId,
+          value: selectedId,
           placeholder: 'Select Project',
           searchable: true,
           options: options,
           actionBuilder: (context, query, close) {
-            final exactMatchExists = projectTaskState.projects.any(
+            final exactMatchExists = projects.any(
               (p) => p.name.toLowerCase() == query.toLowerCase(),
             );
             if (exactMatchExists && query.isNotEmpty)
@@ -344,14 +358,12 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
                   query.isEmpty ? 'New project' : query,
                   '',
                 );
-                setState(() {
-                  _selectedProjectId = newProject.id;
-                });
+                projectTaskState.updateDraft(projectId: newProject.id);
                 if (isRunning) {
                   context.read<TimeTrackerBloc>().add(
                     TimeTrackerActiveEntryUpdated(
                       projectId: newProject.id,
-                      taskId: _selectedTaskId,
+                      taskId: projectTaskState.draftTaskId,
                       comment: _commentController.text,
                     ),
                   );
@@ -361,14 +373,12 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
             );
           },
           onChanged: (value) async {
-            setState(() {
-              _selectedProjectId = value;
-            });
+            projectTaskState.updateDraft(projectId: value);
             if (isRunning) {
               context.read<TimeTrackerBloc>().add(
                 TimeTrackerActiveEntryUpdated(
                   projectId: value,
-                  taskId: _selectedTaskId,
+                  taskId: projectTaskState.draftTaskId,
                   comment: _commentController.text,
                 ),
               );
@@ -379,16 +389,22 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
     );
   }
 
-  Widget _buildTaskSelector(BuildContext context, bool isRunning) {
+  Widget _buildTaskSelector(
+    BuildContext context,
+    bool isRunning,
+    String? selectedId,
+  ) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
-    final projectTaskState = context.watch<ProjectTaskState>();
+    final projectTaskState = context.read<ProjectTaskState>();
+    final tasks = context.select<ProjectTaskState, List<Task>>((s) => s.tasks);
+    final draftProjectId = context.select<ProjectTaskState, String?>(
+      (s) => s.draftProjectId,
+    );
 
-    final filteredTasks = _selectedProjectId != null
-        ? projectTaskState.tasks
-              .where((t) => t.projectId == _selectedProjectId)
-              .toList()
-        : projectTaskState.tasks;
+    final filteredTasks = draftProjectId != null
+        ? tasks.where((t) => t.projectId == draftProjectId).toList()
+        : tasks;
 
     final options = filteredTasks
         .map((t) => SelectOption(value: t.id, label: t.title))
@@ -406,15 +422,15 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
         ),
         SizedBox(height: theme.spacings.s8),
         Select<String>(
-          value: _selectedTaskId,
+          value: selectedId,
           placeholder: 'Select Task',
           searchable: true,
           options: options,
           actionBuilder: (context, query, close) {
-            final exactMatchExists = projectTaskState.tasks.any(
+            final exactMatchExists = tasks.any(
               (t) =>
                   t.title.toLowerCase() == query.toLowerCase() &&
-                  t.projectId == _selectedProjectId,
+                  t.projectId == draftProjectId,
             );
             if (exactMatchExists && query.isNotEmpty)
               return const SizedBox.shrink();
@@ -422,7 +438,7 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
             return SelectCreateAction(
               label: query.isEmpty ? 'Create new task' : 'Create task "$query"',
               onTap: () async {
-                if (_selectedProjectId == null) {
+                if (draftProjectId == null) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Please select a project first'),
@@ -431,17 +447,15 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
                   return;
                 }
                 final newTask = await projectTaskState.createTask(
-                  _selectedProjectId!,
+                  draftProjectId,
                   query.isEmpty ? 'New task' : query,
                   '',
                 );
-                setState(() {
-                  _selectedTaskId = newTask.id;
-                });
+                projectTaskState.updateDraft(taskId: newTask.id);
                 if (isRunning) {
                   context.read<TimeTrackerBloc>().add(
                     TimeTrackerActiveEntryUpdated(
-                      projectId: _selectedProjectId,
+                      projectId: draftProjectId,
                       taskId: newTask.id,
                       comment: _commentController.text,
                     ),
@@ -452,13 +466,11 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
             );
           },
           onChanged: (value) async {
-            setState(() {
-              _selectedTaskId = value;
-            });
+            projectTaskState.updateDraft(taskId: value);
             if (isRunning) {
               context.read<TimeTrackerBloc>().add(
                 TimeTrackerActiveEntryUpdated(
-                  projectId: _selectedProjectId,
+                  projectId: draftProjectId,
                   taskId: value,
                   comment: _commentController.text,
                 ),
@@ -470,9 +482,17 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
     );
   }
 
-  Widget _buildCommentInput(BuildContext context, bool isRunning) {
+  Widget _buildCommentInput(
+    BuildContext context,
+    bool isRunning,
+    String? selectedId,
+  ) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
+    final projectTaskState = context.read<ProjectTaskState>();
+    final draftProjectId = context.select<ProjectTaskState, String?>(
+      (s) => s.draftProjectId,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -523,8 +543,8 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
                 if (isRunning) {
                   context.read<TimeTrackerBloc>().add(
                     TimeTrackerActiveEntryUpdated(
-                      projectId: _selectedProjectId,
-                      taskId: _selectedTaskId,
+                      projectId: draftProjectId,
+                      taskId: projectTaskState.draftTaskId,
                       comment: value,
                     ),
                   );

@@ -18,6 +18,7 @@ import 'package:worklog_studio/state/entity_resolver.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
 import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
 import 'package:worklog_studio_style_system/ui_kit/src/drawer/drawer_service.dart';
+import 'package:worklog_studio/core/services/desktop/desktop_service.dart';
 
 import 'layout/app_bar/app_bar_navigator_observer.dart';
 
@@ -37,7 +38,10 @@ class App extends StatelessWidget {
             repository: repository,
             clock: clock,
           );
-          return TimeTrackerBloc(service: service)..add(TimeTrackerLoaded());
+          final bloc = TimeTrackerBloc(service: service)
+            ..add(TimeTrackerLoaded());
+
+          return bloc;
         },
       ),
       ChangeNotifierProvider(
@@ -66,18 +70,55 @@ class App extends StatelessWidget {
         },
       ),
     ],
-    child: MaterialApp(
+    child: const _DesktopInitializationWrapper(child: _AppMaterialApp()),
+  );
+}
+
+class _DesktopInitializationWrapper extends StatefulWidget {
+  final Widget child;
+  const _DesktopInitializationWrapper({required this.child});
+
+  @override
+  State<_DesktopInitializationWrapper> createState() =>
+      _DesktopInitializationWrapperState();
+}
+
+class _DesktopInitializationWrapperState
+    extends State<_DesktopInitializationWrapper> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final bloc = context.read<TimeTrackerBloc>();
+      final resolver = context.read<EntityResolver>();
+      final projectTaskState = context.read<ProjectTaskState>();
+      DesktopService().init(bloc, resolver, projectTaskState);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+
+class _AppMaterialApp extends StatelessWidget {
+  const _AppMaterialApp();
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
       title: appEnvironment.config.flavor.appTitle,
       showPerformanceOverlay:
-          _getDebugConfig()?.showPerformanceOverlay ?? false,
-      debugShowMaterialGrid: _getDebugConfig()?.debugShowMaterialGrid ?? false,
+          _getDebugConfig(context)?.showPerformanceOverlay ?? false,
+      debugShowMaterialGrid:
+          _getDebugConfig(context)?.debugShowMaterialGrid ?? false,
       checkerboardRasterCacheImages:
-          _getDebugConfig()?.checkerboardRasterCacheImages ?? false,
+          _getDebugConfig(context)?.checkerboardRasterCacheImages ?? false,
       checkerboardOffscreenLayers:
-          _getDebugConfig()?.checkerboardOffscreenLayers ?? false,
-      showSemanticsDebugger: _getDebugConfig()?.showSemanticsDebugger ?? false,
+          _getDebugConfig(context)?.checkerboardOffscreenLayers ?? false,
+      showSemanticsDebugger:
+          _getDebugConfig(context)?.showSemanticsDebugger ?? false,
       debugShowCheckedModeBanner:
-          _getDebugConfig()?.debugShowCheckedModeBanner ?? false,
+          _getDebugConfig(context)?.debugShowCheckedModeBanner ?? false,
       // locale: LocalizationScope.localeOf(context),
       // localizationsDelegates: AppLocalizations.localizationsDelegates,
       // supportedLocales: AppLocalizations.supportedLocales,
@@ -196,7 +237,9 @@ class App extends StatelessWidget {
         return AppBarScope(child: child!);
       },
       home: const AppShell(),
-    ),
-  );
-  DebugOptions? _getDebugConfig() => appEnvironment.config.debugOptions;
+    );
+  }
+
+  DebugOptions? _getDebugConfig(BuildContext context) =>
+      appEnvironment.config.debugOptions;
 }
