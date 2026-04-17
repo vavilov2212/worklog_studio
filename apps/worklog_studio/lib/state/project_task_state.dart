@@ -34,13 +34,26 @@ class ProjectTaskState extends ChangeNotifier {
   String? get draftTaskId => _draftTaskId;
   String get draftComment => _draftComment;
 
-  void updateDraft({String? projectId, String? taskId, String? comment}) {
-    if (projectId != null || comment != null) {
-      // If project or comment changed, we might need to update
-      _draftProjectId = projectId ?? _draftProjectId;
-      _draftComment = comment ?? _draftComment;
+  void updateDraft({
+    String? projectId,
+    bool clearTaskId = false,
+    String? taskId,
+    String? comment,
+  }) {
+    if (projectId != null) {
+      if (_draftProjectId != projectId) {
+        _draftTaskId = null; // Clear task when project changes
+      }
+      _draftProjectId = projectId;
     }
-    _draftTaskId = taskId ?? _draftTaskId;
+    if (comment != null) {
+      _draftComment = comment;
+    }
+    if (clearTaskId) {
+      _draftTaskId = null;
+    } else if (taskId != null) {
+      _draftTaskId = taskId;
+    }
     notifyListeners();
   }
 

@@ -13,6 +13,9 @@ import 'package:worklog_studio/feature/time_tracker/presentation/components/acti
 import 'package:worklog_studio/state/project_task_state.dart';
 import 'package:worklog_studio/feature/home/data/mock_data.dart' as mock;
 
+import 'package:worklog_studio/core/services/desktop/desktop_service.dart';
+import 'dart:async';
+
 enum AppRoute { dashboard, history, projects, tasks, settings }
 
 class AppShell extends StatefulWidget {
@@ -24,6 +27,23 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   AppRoute _currentRoute = AppRoute.dashboard;
+  StreamSubscription<String>? _navSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _navSub = DesktopService().navigationStream.listen((route) {
+      if (route == 'history') {
+        _onRouteSelected(AppRoute.history);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _navSub?.cancel();
+    super.dispose();
+  }
 
   void _onRouteSelected(AppRoute route) {
     setState(() {
@@ -466,7 +486,11 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
             );
           },
           onChanged: (value) async {
-            projectTaskState.updateDraft(taskId: value);
+            if (value == null) {
+              projectTaskState.updateDraft(clearTaskId: true);
+            } else {
+              projectTaskState.updateDraft(taskId: value);
+            }
             if (isRunning) {
               context.read<TimeTrackerBloc>().add(
                 TimeTrackerActiveEntryUpdated(

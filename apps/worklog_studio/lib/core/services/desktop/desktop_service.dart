@@ -16,6 +16,9 @@ class DesktopService {
 
   static const _channel = MethodChannel('worklog_studio/ipc');
 
+  final _navigationStreamController = StreamController<String>.broadcast();
+  Stream<String> get navigationStream => _navigationStreamController.stream;
+
   TimeTrackerBloc? _leaderBloc;
   StreamSubscription<TimeTrackerBlocState>? _blocSubscription;
   EntityResolver? _resolver;
@@ -46,6 +49,12 @@ class DesktopService {
     _blocSubscription = bloc.stream.listen((state) {
       _updateTray(state);
       _broadcastSnapshotIfReady(state);
+    });
+
+    _projectTaskState?.addListener(() {
+      if (_leaderBloc != null) {
+        _broadcastSnapshotIfReady(_leaderBloc!.state);
+      }
     });
 
     _channel.setMethodCallHandler((call) async {
@@ -104,6 +113,8 @@ class DesktopService {
         if (_leaderBloc != null) {
           _broadcastSnapshotIfReady(_leaderBloc!.state);
         }
+      } else if (method == 'openHistory') {
+        _navigationStreamController.add('history');
       } else if (method == 'miniClosed') {
         _followerReady = false;
       } else if (method == 'miniClosed_native') {
@@ -131,11 +142,21 @@ class DesktopService {
   void _handleFollowerAction(TimerAction action) {
     if (_leaderBloc == null) return;
 
-    // Idempotent processing in leader
     final isCurrentlyRunning = _leaderBloc!.state.isRunning;
 
     if (action.type == TimerActionType.start) {
-      if (!isCurrentlyRunning) {
+      if (isCurrentlyRunning) {
+        _leaderBloc!.add(TimeTrackerStopped());
+        Future.delayed(const Duration(milliseconds: 200), () {
+          _leaderBloc!.add(
+            TimeTrackerStarted(
+              projectId: action.projectId,
+              taskId: action.taskId,
+              comment: action.comment,
+            ),
+          );
+        });
+      } else {
         _leaderBloc!.add(
           TimeTrackerStarted(
             projectId: action.projectId,
@@ -151,6 +172,20 @@ class DesktopService {
     }
   }
 
+  void openHistoryFromTray() {
+    if (!_isPopover) return;
+    try {
+      _channel.invokeMethod('sendMessage', {
+        'target': 'main',
+        'method': 'openHistory',
+        'payload': null,
+      });
+      // Optionally also close popover natively depending on design
+    } catch (e) {
+      debugPrint("Failed to open history: $e");
+    }
+  }
+
   void _broadcastSnapshotIfReady(TimeTrackerBlocState state) {
     if (!_followerReady) return;
 
@@ -158,6 +193,8 @@ class DesktopService {
       isRunning: state.isRunning,
       activeEntry: state.activeEntryOrNull,
       entries: state.allEntries,
+      tasks: _projectTaskState?.tasks ?? [],
+      projects: _projectTaskState?.projects ?? [],
       timestamp: DateTime.now().millisecondsSinceEpoch,
     );
 
