@@ -10,14 +10,14 @@
   <item>
     <title>Version 1.0.5</title>
     <sparkle:releaseNotesLink>https://github.com/vavilov2212/worklog_studio/releases/tag/v1.0.5</sparkle:releaseNotesLink>
-    <pubDate>Fri, 17 Apr 2026 10:45:17 -0500</pubDate>
+    <pubDate>Fri, 17 Apr 2026 10:48:28 -0500</pubDate>
 
     <enclosure
       url="https://github.com/vavilov2212/worklog_studio/releases/download/v1.0.5/worklogStudio.dmg"
-      sparkle:version="21"
+      sparkle:version="22"
       sparkle:shortVersionString="1.0.5"
-      sparkle:edSignature="ZFp0FXeQw0UBKwilkyXIbksAbX0id4svV+e1KgVS3G3UMLfrXxBWQYtbcffkFZGkMRCIcYJdXKOlaB4NiVsOAw=="
-      length="27480702"
+      sparkle:edSignature="MlYX5fGgiseTPko4htY6DhgXXyOGlGO9ifWONYgCkX1wQsyJUXIbpQM8L++mrZh86aVZa3kO79OBrtLoMMtLBQ=="
+      length="27480703"
       type="application/octet-stream"/>
   </item>
 
