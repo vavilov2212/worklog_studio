@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:worklog_studio/core/services/desktop/desktop_service.dart';
 import 'package:worklog_studio/core/services/time_tracker_service.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
@@ -56,6 +57,8 @@ class TimeTrackerBloc extends Bloc<TimeTrackerEvent, TimeTrackerBlocState> {
     TimeTrackerStarted event,
     Emitter<TimeTrackerBlocState> emit,
   ) async {
+    if (state.isRunning) return; // Feature: Idempotent action
+
     try {
       final active = await _service.start(
         projectId: event.projectId,
@@ -83,6 +86,8 @@ class TimeTrackerBloc extends Bloc<TimeTrackerEvent, TimeTrackerBlocState> {
     TimeTrackerStopped event,
     Emitter<TimeTrackerBlocState> emit,
   ) async {
+    if (!state.isRunning) return; // Feature: Idempotent action
+
     try {
       await _service.stop();
       final entries = await _service.getAll();

@@ -10,6 +10,14 @@ class MainFlutterWindow: NSWindow {
 
     RegisterGeneratedPlugins(registry: flutterViewController)
 
+    // Регистрируем MethodChannel для главного окна через IpcRouter
+    if let appDelegate = NSApp.delegate as? AppDelegate {
+        IpcRouter.shared.register(messenger: flutterViewController.engine.binaryMessenger, role: "main") { (call, result) in
+            // Делегируем нативные команды (например, updateTray) в appDelegate
+            appDelegate.handleNativeCommand(call: call, result: result)
+        }
+    }
+
     super.awakeFromNib()
   }
 }

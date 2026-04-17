@@ -20,23 +20,18 @@ import 'package:worklog_studio_style_system/ui_kit/ui_kit.dart';
 
 import 'dart:convert';
 
-import 'package:desktop_multi_window/desktop_multi_window.dart';
-import 'package:worklog_studio/feature/desktop/presentation/mini_app.dart';
+import 'package:worklog_studio/feature/app/app.dart';
 
 Future<void> run(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  if (args.isNotEmpty && args.first == 'multi_window') {
-    final windowId = int.parse(args[1]);
-    final argument = args[2].isEmpty
-        ? const <String, dynamic>{}
-        : jsonDecode(args[2]) as Map<String, dynamic>;
-
-    runApp(MiniApp(windowId: windowId, argument: argument));
-    return;
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint('Firebase already initialized: $e');
   }
-
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // 🔑 ВАЖНО: для desktop / VM
   if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
@@ -55,7 +50,39 @@ Future<void> run(List<String> args) async {
   _initDependencies();
   _initRepositories();
 
-  runApp(App());
+  String? initialRoute;
+  bool isPopover = false;
+  if (Platform.isMacOS) {
+    try {
+      const channel = MethodChannel('worklog_studio/ipc');
+      final engineInfo = await channel
+          .invokeMapMethod<String, dynamic>('getEngineInfo')
+          .timeout(
+            const Duration(seconds: 1),
+            onTimeout: () {
+              debugPrint('getEngineInfo timed out!');
+              return {'role': 'main'}; // default fallback
+            },
+          );
+
+      final role = engineInfo?['role'] as String? ?? 'main';
+      debugPrint('Successfully resolved engine role: $role');
+
+      if (role == 'tray') {
+        initialRoute = '/mini';
+        isPopover = true;
+      }
+    } catch (e) {
+      debugPrint('Failed to fetch engine info: $e');
+    }
+  }
+
+  debugPrint('runApp starting with initialRoute: $initialRoute');
+  if (isPopover) {
+    runApp(const MiniApp());
+  } else {
+    runApp(MainApp(initialRoute: initialRoute));
+  }
 }
 
 void _initDependencies() async {
