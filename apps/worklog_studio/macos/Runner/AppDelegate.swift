@@ -144,6 +144,9 @@ class AppDelegate: FlutterAppDelegate {
         case "checkForUpdates":
             self.updaterController?.checkForUpdates(nil)
             result(nil)
+        case "focusMainWindow":
+            self.focusMainWindow()
+            result(nil)
         case "updateTray":
             if let args = call.arguments as? [String: Any] {
                 if let title = args["title"] as? String {
@@ -181,7 +184,21 @@ class AppDelegate: FlutterAppDelegate {
         panel.setFrame(frame, display: true, animate: true)
     }
 
+    func focusMainWindow() {
+        if let window = NSApplication.shared.windows.first(where: { $0 is MainFlutterWindow }) {
+            window.makeKeyAndOrderFront(nil)
+            NSApplication.shared.activate(ignoringOtherApps: true)
+        }
+    }
+
     override func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         return false
+    }
+
+    override func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !flag {
+            focusMainWindow()
+        }
+        return true
     }
 }

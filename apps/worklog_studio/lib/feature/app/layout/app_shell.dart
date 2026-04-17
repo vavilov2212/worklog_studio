@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:vector_svg/extension/vector_graphic_extention.dart';
 import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/feature/settings/settings_screen.dart';
@@ -36,6 +35,8 @@ class _AppShellState extends State<AppShell> {
     _navSub = DesktopService().navigationStream.listen((route) {
       if (route == 'history') {
         _onRouteSelected(AppRoute.history);
+      } else if (route == 'tasks') {
+        _onRouteSelected(AppRoute.tasks);
       }
     });
   }

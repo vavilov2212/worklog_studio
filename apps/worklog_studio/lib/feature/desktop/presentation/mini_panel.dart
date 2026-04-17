@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:vector_svg/extension/vector_graphic_extention.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
 import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/domain/project.dart';
@@ -332,6 +331,24 @@ class _MiniPanelState extends State<MiniPanel> {
               'SEARCH RESULTS',
               style: theme.commonTextStyles.caption2Bold.copyWith(
                 color: theme.colorsPalette.text.secondary2,
+              ),
+            ),
+            const Spacer(),
+            InkWell(
+              onTap: () {
+                DesktopService().openTasksFromTray();
+              },
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: theme.spacings.s4,
+                  vertical: theme.spacings.s2,
+                ),
+                child: Text(
+                  'View All',
+                  style: theme.commonTextStyles.caption2.copyWith(
+                    color: theme.colorsPalette.accent.primary,
+                  ),
+                ),
               ),
             ),
           ],

@@ -114,7 +114,11 @@ class DesktopService {
           _broadcastSnapshotIfReady(_leaderBloc!.state);
         }
       } else if (method == 'openHistory') {
+        _channel.invokeMethod('focusMainWindow');
         _navigationStreamController.add('history');
+      } else if (method == 'openTasks') {
+        _channel.invokeMethod('focusMainWindow');
+        _navigationStreamController.add('tasks');
       } else if (method == 'miniClosed') {
         _followerReady = false;
       } else if (method == 'miniClosed_native') {
@@ -183,6 +187,19 @@ class DesktopService {
       // Optionally also close popover natively depending on design
     } catch (e) {
       debugPrint("Failed to open history: $e");
+    }
+  }
+
+  void openTasksFromTray() {
+    if (!_isPopover) return;
+    try {
+      _channel.invokeMethod('sendMessage', {
+        'target': 'main',
+        'method': 'openTasks',
+        'payload': null,
+      });
+    } catch (e) {
+      debugPrint("Failed to open tasks: $e");
     }
   }
 
