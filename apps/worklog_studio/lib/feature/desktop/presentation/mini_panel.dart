@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:vector_svg/extension/vector_graphic_extention.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
 import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/domain/project.dart';
@@ -128,7 +129,7 @@ class _MiniPanelState extends State<MiniPanel> {
                 PrimaryButton(
                   type: ButtonType.danger,
                   size: ButtonSize.sm,
-                  leftIconWidget: const Icon(Icons.stop_sharp),
+                  leftIcon: WorklogStudioAssets.vectors.squareFilled64Svg,
                   onTap: () {
                     context.read<MiniTrackerCubit>().stopTimer();
                   },
@@ -208,25 +209,20 @@ class _MiniPanelState extends State<MiniPanel> {
           ),
           SizedBox(width: theme.spacings.s8),
           if (isActive)
-            PrimaryButton(
-              type: ButtonType.ghost,
-              size: ButtonSize.sm,
-              leftIconWidget: Icon(
-                Icons.stop,
-                // color: theme.colorsPalette.semantic.negative,
-              ),
-              onTap: () {
-                context.read<MiniTrackerCubit>().stopTimer();
-              },
-            )
+            SizedBox.shrink()
+          // PrimaryButton(
+          //   type: ButtonType.ghost,
+          //   size: ButtonSize.sm,
+          //   leftIcon: WorklogStudioAssets.vectors.squareFilled64Svg,
+          //   onTap: () {
+          //     context.read<MiniTrackerCubit>().stopTimer();
+          //   },
+          // )
           else
             PrimaryButton(
               type: ButtonType.ghost,
               size: ButtonSize.sm,
-              leftIconWidget: Icon(
-                Icons.play_arrow,
-                color: theme.colorsPalette.text.primary,
-              ),
+              leftIcon: WorklogStudioAssets.vectors.playFilled64Svg,
               onTap: () {
                 context.read<MiniTrackerCubit>().startTimer(
                   projectId: project?.id,

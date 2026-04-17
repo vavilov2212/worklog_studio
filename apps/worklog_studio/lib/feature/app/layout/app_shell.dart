@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:vector_svg/extension/vector_graphic_extention.dart';
 import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/feature/settings/settings_screen.dart';
@@ -278,7 +279,7 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
                     ActiveTimerText(
                       style: theme.commonTextStyles.h1.copyWith(
                         color: isRunning
-                            ? palette.accent.primary
+                            ? palette.text.primary
                             : palette.text.muted,
                         fontFeatures: const [FontFeature.tabularFigures()],
                       ),
@@ -293,8 +294,11 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
                     SizedBox(height: theme.spacings.s8),
                     isRunning
                         ? PrimaryButton(
+                            size: ButtonSize.sm,
+                            type: ButtonType.danger,
                             title: 'STOP',
-                            leftIcon: WorklogStudioAssets.vectors.square24Svg,
+                            leftIcon:
+                                WorklogStudioAssets.vectors.squareFilled64Svg,
                             backgroundColor: palette.accent.danger,
                             onTap: () {
                               context.read<TimeTrackerBloc>().add(
@@ -305,9 +309,11 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
                             },
                           )
                         : PrimaryButton(
+                            size: ButtonSize.sm,
+
                             title: 'START',
                             leftIcon:
-                                WorklogStudioAssets.vectors.playerPlay24Svg,
+                                WorklogStudioAssets.vectors.playFilled64Svg,
                             onTap: () {
                               context.read<TimeTrackerBloc>().add(
                                 TimeTrackerStarted(

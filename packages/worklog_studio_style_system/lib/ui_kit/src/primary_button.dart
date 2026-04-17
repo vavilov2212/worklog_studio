@@ -235,13 +235,15 @@ class _PrimaryButtonState extends State<PrimaryButton> {
                           _wrapIcon(widget.leftIconWidget!)
                         else if (widget.leftIcon != null)
                           buildIcon(widget.leftIcon)!,
-                        if (widget.title != null)
+                        if (widget.title != null) ...[
+                          SizedBox(width: 8),
                           Flexible(
                             child: Text(
                               widget.title!,
                               style: textStyle.copyWith(color: foregroundColor),
                             ),
                           ),
+                        ],
                         if (widget.rightIconWidget != null)
                           _wrapIcon(widget.rightIconWidget!)
                         else if (widget.rightIcon != null)
