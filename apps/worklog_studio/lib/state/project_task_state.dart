@@ -26,6 +26,44 @@ class ProjectTaskState extends ChangeNotifier {
   List<Project> get projects => _projects;
   List<Task> get tasks => _tasks;
 
+  String? _draftProjectId;
+  String? _draftTaskId;
+  String _draftComment = '';
+
+  String? get draftProjectId => _draftProjectId;
+  String? get draftTaskId => _draftTaskId;
+  String get draftComment => _draftComment;
+
+  void updateDraft({
+    String? projectId,
+    bool clearTaskId = false,
+    String? taskId,
+    String? comment,
+  }) {
+    if (projectId != null) {
+      if (_draftProjectId != projectId) {
+        _draftTaskId = null; // Clear task when project changes
+      }
+      _draftProjectId = projectId;
+    }
+    if (comment != null) {
+      _draftComment = comment;
+    }
+    if (clearTaskId) {
+      _draftTaskId = null;
+    } else if (taskId != null) {
+      _draftTaskId = taskId;
+    }
+    notifyListeners();
+  }
+
+  void clearDraft() {
+    _draftProjectId = null;
+    _draftTaskId = null;
+    _draftComment = '';
+    notifyListeners();
+  }
+
   Future<void> _init() async {
     await loadData();
   }

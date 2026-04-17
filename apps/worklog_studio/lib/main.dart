@@ -2,8 +2,8 @@ import 'package:worklog_studio/core/environment/app_environment.dart';
 
 import 'runner/runner.dart' as runner;
 
-void main() async {
+void main(List<String> args) async {
   AppEnvironment.init(config: const AppConfig(flavor: Flavor.production));
 
-  await runner.run();
+  await runner.run(args);
 }

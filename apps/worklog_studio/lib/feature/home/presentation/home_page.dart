@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:collection/collection.dart';
+import 'package:worklog_studio/domain/resolved_task.dart';
+import 'package:worklog_studio/domain/resolved_time_entry.dart';
 import 'package:worklog_studio/feature/tasks/presentation/components/tasks_card.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
-import 'package:worklog_studio/state/time_tracker_state.dart';
-import 'package:worklog_studio/state/project_task_state.dart';
+import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
+import 'package:worklog_studio/state/entity_resolver.dart';
 import 'package:worklog_studio/feature/history/presentation/components/time_entry_card.dart';
-import 'package:worklog_studio/domain/resolved_time_entry.dart';
 
 class HomePage extends StatefulWidget {
   final String title;
@@ -57,7 +59,6 @@ class _DashboardHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
-    final state = context.watch<TimeTrackerState>();
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -78,7 +79,7 @@ class _DashboardHeader extends StatelessWidget {
         PrimaryButton(
           title: 'Add Time Entry',
           onTap: () {
-            state.start();
+            context.read<TimeTrackerBloc>().add(TimeTrackerStarted());
           },
         ),
       ],
@@ -93,13 +94,20 @@ class _DailyFocusCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
-    final state = context.watch<TimeTrackerState>();
+
+    // Use granular selectors to minimize rebuilds
+    final allEntries = context.select(
+      (TimeTrackerBloc bloc) => bloc.state.allEntries,
+    );
+    final isRunning = context.select(
+      (TimeTrackerBloc bloc) => bloc.state.isRunning,
+    );
 
     // Calculate total time for today
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
-    final todayEntries = state.entries.where((e) {
+    final todayEntries = allEntries.where((e) {
       final start = DateTime(e.startAt.year, e.startAt.month, e.startAt.day);
       return start == today;
     });
@@ -126,7 +134,7 @@ class _DailyFocusCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('Daily Focus', style: theme.commonTextStyles.title),
-              if (state.isRunning)
+              if (isRunning)
                 const StatusBadge(
                   status: BadgeStatus.inProgress,
                   label: 'ACTIVE',
@@ -211,67 +219,65 @@ class _TopTasksSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
-    final projectTaskState = context.watch<ProjectTaskState>();
-    final timeTrackerState = context.watch<TimeTrackerState>();
 
-    // Calculate total time per task
-    final Map<String, Duration> taskDurations = {};
-    for (final entry in timeTrackerState.entries) {
-      if (entry.taskId != null) {
-        taskDurations[entry.taskId!] =
-            (taskDurations[entry.taskId!] ?? Duration.zero) +
-            entry.duration(DateTime.now());
-      }
-    }
+    return Selector<EntityResolver, List<ResolvedTask>>(
+      selector: (context, resolver) => resolver.getResolvedTasks(),
+      shouldRebuild: (prev, next) => !const ListEquality().equals(prev, next),
+      builder: (context, topTasks, child) {
+        final now = DateTime.now();
 
-    // Sort tasks by duration
-    final sortedTasks = List.of(projectTaskState.tasks)
-      ..sort((a, b) {
-        final durationA = taskDurations[a.id] ?? Duration.zero;
-        final durationB = taskDurations[b.id] ?? Duration.zero;
-        return durationB.compareTo(durationA);
-      });
+        // Sort tasks by duration and take top 5
+        final sortedTasks = List.of(topTasks)
+          ..sort((a, b) {
+            return b.duration(now).compareTo(a.duration(now));
+          });
 
-    final topTasks = sortedTasks.take(5).toList();
+        final displayTasks = sortedTasks.take(5).toList();
 
-    return Container(
-      padding: EdgeInsets.all(theme.spacings.s24),
-      decoration: BoxDecoration(
-        color: palette.background.surfaceMuted,
-        borderRadius: theme.radiuses.lg.circular,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return Container(
+          padding: EdgeInsets.all(theme.spacings.s24),
+          decoration: BoxDecoration(
+            color: palette.background.surfaceMuted,
+            borderRadius: theme.radiuses.lg.circular,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Top Tasks', style: theme.commonTextStyles.h3),
-              Text(
-                'View All',
-                style: theme.commonTextStyles.bodyBold.copyWith(
-                  color: palette.accent.primary,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Top Tasks', style: theme.commonTextStyles.h3),
+                  Text(
+                    'View All',
+                    style: theme.commonTextStyles.bodyBold.copyWith(
+                      color: palette.accent.primary,
+                    ),
+                  ),
+                ],
               ),
+              SizedBox(height: theme.spacings.s24),
+              if (displayTasks.isEmpty)
+                Text(
+                  'No tasks tracked yet.',
+                  style: theme.commonTextStyles.body.copyWith(
+                    color: palette.text.muted,
+                  ),
+                )
+              else
+                Column(
+                  spacing: theme.spacings.s16,
+                  children: displayTasks.map((resolvedTask) {
+                    return TaskCard(
+                      task: resolvedTask,
+                      isSelected: false,
+                      onTap: () {},
+                    );
+                  }).toList(),
+                ),
             ],
           ),
-          SizedBox(height: theme.spacings.s24),
-          if (topTasks.isEmpty)
-            Text(
-              'No tasks tracked yet.',
-              style: theme.commonTextStyles.body.copyWith(
-                color: palette.text.muted,
-              ),
-            )
-          else
-            Column(
-              spacing: theme.spacings.s16,
-              children: topTasks.map((task) {
-                return TaskCard(task: task, isSelected: false, onTap: () {});
-              }).toList(),
-            ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -283,75 +289,62 @@ class _RecentActivitySection extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
-    final state = context.watch<TimeTrackerState>();
-    final projectTaskState = context.watch<ProjectTaskState>();
 
-    final sortedEntries = List.of(state.entries)
-      ..sort((a, b) {
-        if (a.isRunning && !b.isRunning) return -1;
-        if (!a.isRunning && b.isRunning) return 1;
-        return b.startAt.compareTo(a.startAt);
-      });
+    return Selector<EntityResolver, List<ResolvedTimeEntry>>(
+      selector: (context, resolver) => resolver.getResolvedTimeEntries(),
+      shouldRebuild: (prev, next) => !const ListEquality().equals(prev, next),
+      builder: (context, resolvedEntries, child) {
+        final sortedEntries = List.of(resolvedEntries)
+          ..sort((a, b) {
+            if (a.isRunning && !b.isRunning) return -1;
+            if (!a.isRunning && b.isRunning) return 1;
+            return b.startAt.compareTo(a.startAt);
+          });
 
-    final recentEntries = sortedEntries.take(5).toList();
+        final recentEntries = sortedEntries.take(5).toList();
 
-    return Container(
-      padding: EdgeInsets.all(theme.spacings.s24),
-      decoration: BoxDecoration(
-        color: palette.background.surface,
-        borderRadius: theme.radiuses.lg.circular,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Recent Activity', style: theme.commonTextStyles.h3),
-          SizedBox(height: theme.spacings.s24),
-          if (recentEntries.isEmpty)
-            Text(
-              'No recent activity.',
-              style: theme.commonTextStyles.body.copyWith(
-                color: palette.text.muted,
-              ),
-            )
-          else
-            Column(
-              spacing: theme.spacings.s12,
-              children: recentEntries.map((entry) {
-                final task = entry.taskId != null
-                    ? projectTaskState.tasks
-                          .where((t) => t.id == entry.taskId)
-                          .firstOrNull
-                    : null;
-                final project = entry.projectId != null
-                    ? projectTaskState.projects
-                          .where((p) => p.id == entry.projectId)
-                          .firstOrNull
-                    : null;
-
-                final resolvedEntry = ResolvedTimeEntry(
-                  entry: entry,
-                  task: task,
-                  project: project,
-                );
-
-                return TimeEntryCard(
-                  resolvedEntry: resolvedEntry,
-                  isSelected: false,
-                  onTap: () {},
-                );
-              }).toList(),
-            ),
-          SizedBox(height: theme.spacings.s16),
-          SizedBox(
-            width: double.infinity,
-            child: PrimaryButton(
-              title: 'View All History',
-              type: ButtonType.ghost,
-              onTap: () {},
-            ),
+        return Container(
+          padding: EdgeInsets.all(theme.spacings.s24),
+          decoration: BoxDecoration(
+            color: palette.background.surface,
+            borderRadius: theme.radiuses.lg.circular,
           ),
-        ],
-      ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Recent Activity', style: theme.commonTextStyles.h3),
+              SizedBox(height: theme.spacings.s24),
+              if (recentEntries.isEmpty)
+                Text(
+                  'No recent activity.',
+                  style: theme.commonTextStyles.body.copyWith(
+                    color: palette.text.muted,
+                  ),
+                )
+              else
+                Column(
+                  spacing: theme.spacings.s12,
+                  children: recentEntries.map((resolvedEntry) {
+                    return TimeEntryCard(
+                      resolvedEntry: resolvedEntry,
+                      isSelected: false,
+                      onTap: () {},
+                    );
+                  }).toList(),
+                ),
+              SizedBox(height: theme.spacings.s16),
+              SizedBox(
+                width: double.infinity,
+                child: PrimaryButton(
+                  title: 'View All History',
+                  type: ButtonType.ghost,
+                  onTap: () {},
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

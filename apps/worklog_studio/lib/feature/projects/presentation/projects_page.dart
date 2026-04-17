@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/domain/project.dart';
+import 'package:worklog_studio/domain/resolved_project.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
+import 'package:worklog_studio/state/entity_resolver.dart';
 import 'components/project_card.dart';
 import 'components/project_drawer.dart';
 
@@ -46,14 +48,15 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final projectTaskState = context.watch<ProjectTaskState>();
+    final resolver = context.watch<EntityResolver>();
+    final resolvedProjects = resolver.getResolvedProjects();
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
           child: ProjectList(
-            projects: projectTaskState.projects,
+            projects: resolvedProjects,
             selectedProject: selectedProject,
             onProjectSelected: _handleProjectSelected,
             onCreateProject: _handleCreateProject,
@@ -71,7 +74,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
 }
 
 class ProjectList extends StatelessWidget {
-  final List<Project> projects;
+  final List<ResolvedProject> projects;
   final Project? selectedProject;
   final ValueChanged<Project> onProjectSelected;
   final VoidCallback onCreateProject;
@@ -135,7 +138,7 @@ class ProjectList extends StatelessWidget {
               return ProjectCard(
                 project: project,
                 isSelected: isSelected,
-                onTap: () => onProjectSelected(project),
+                onTap: () => onProjectSelected(project.project),
               );
             }).toList(),
           ),

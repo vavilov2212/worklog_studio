@@ -6,6 +6,8 @@ class PrimaryButton extends StatefulWidget {
   final String? title;
   final String? leftIcon;
   final String? rightIcon;
+  final Widget? leftIconWidget;
+  final Widget? rightIconWidget;
   final ButtonType type;
   final ButtonSize size;
   final bool isLoading;
@@ -20,6 +22,8 @@ class PrimaryButton extends StatefulWidget {
     this.title,
     this.leftIcon,
     this.rightIcon,
+    this.leftIconWidget,
+    this.rightIconWidget,
     this.type = ButtonType.primary,
     this.size = ButtonSize.md,
     this.isLoading = false,
@@ -178,6 +182,17 @@ class _PrimaryButtonState extends State<PrimaryButton> {
         };
   }
 
+  Widget _wrapIcon(Widget icon) {
+    return SizedBox(
+      width: iconDimension,
+      height: iconDimension,
+      child: IconTheme(
+        data: IconThemeData(color: foregroundColor, size: iconDimension),
+        child: icon,
+      ),
+    );
+  }
+
   void _onTap() {
     if (widget.isLoading) return;
     widget.onTap?.call();
@@ -216,7 +231,9 @@ class _PrimaryButtonState extends State<PrimaryButton> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (widget.leftIcon != null)
+                        if (widget.leftIconWidget != null)
+                          _wrapIcon(widget.leftIconWidget!)
+                        else if (widget.leftIcon != null)
                           buildIcon(widget.leftIcon)!,
                         if (widget.title != null)
                           Flexible(
@@ -225,7 +242,9 @@ class _PrimaryButtonState extends State<PrimaryButton> {
                               style: textStyle.copyWith(color: foregroundColor),
                             ),
                           ),
-                        if (widget.rightIcon != null)
+                        if (widget.rightIconWidget != null)
+                          _wrapIcon(widget.rightIconWidget!)
+                        else if (widget.rightIcon != null)
                           buildIcon(widget.rightIcon)!,
                       ],
                     ),

@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:collection/collection.dart';
 import 'package:worklog_studio/core/environment/app_environment.dart';
 import 'package:worklog_studio/feature/app/layout/app_bar/app_bar.dart';
 import 'package:worklog_studio/feature/app/layout/scaffold/app_scaffold.dart';
 import 'package:worklog_studio/feature/work_log/presentation/work_log_raw_data_scope.dart';
-import 'package:worklog_studio/state/time_tracker_state.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
+import 'package:worklog_studio/feature/time_tracker/presentation/components/active_timer_text.dart';
+import 'package:worklog_studio/state/project_task_state.dart';
 // import 'package:worklog_studio_style_system/ui_kit/src/select/index.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
@@ -18,24 +22,10 @@ class WelcomeLayout extends StatefulWidget {
 class WelcomeLayoutState extends State<WelcomeLayout> {
   final _textController = TextEditingController();
   final popoverController = PopoverController();
-  late TimeTrackerState state;
-
-  String? formatDuration(Duration? d) {
-    if (d == null) return null;
-
-    String two(int n) => n.toString().padLeft(2, '0');
-
-    final hours = two(d.inHours);
-    final minutes = two(d.inMinutes.remainder(60));
-    final seconds = two(d.inSeconds.remainder(60));
-
-    return '$hours:$minutes:$seconds';
-  }
-
   @override
   void initState() {
-    state = context.read<TimeTrackerState>();
-    _textController.text = state.activeEntry?.comment ?? '';
+    final state = context.read<TimeTrackerBloc>().state;
+    _textController.text = state.activeEntryOrNull?.comment ?? '';
     super.initState();
   }
 
@@ -47,235 +37,363 @@ class WelcomeLayoutState extends State<WelcomeLayout> {
 
   @override
   Widget build(BuildContext context) {
-    final _state = context.watch<TimeTrackerState>();
-    return AppBarProvider(
-      config: AppBarConfig(
-        title: Text(AppEnvironment.instance().config.flavor.appTitle),
-      ),
+    return BlocListener<TimeTrackerBloc, TimeTrackerBlocState>(
+      listenWhen: (previous, current) =>
+          previous.activeEntryOrNull?.comment !=
+          current.activeEntryOrNull?.comment,
+      listener: (context, state) {
+        final comment = state.activeEntryOrNull?.comment ?? '';
+        if (_textController.text != comment) {
+          _textController.text = comment;
+        }
+      },
+      child: BlocBuilder<TimeTrackerBloc, TimeTrackerBlocState>(
+        buildWhen: (previous, current) =>
+            previous.isRunning != current.isRunning ||
+            previous.activeEntryOrNull != current.activeEntryOrNull ||
+            !const ListEquality().equals(
+              previous.allEntries,
+              current.allEntries,
+            ),
+        builder: (context, _state) {
+          final isRunning = _state.isRunning;
+          final activeEntry = _state.activeEntryOrNull;
+          final entries = _state.allEntries;
+          final bloc = context.read<TimeTrackerBloc>();
 
-      child: AppScaffold(
-        body: Row(
-          children: [
-            Expanded(
-              child: DecoratedBox(
-                decoration: BoxDecoration(color: Colors.green),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Center(
+          return AppBarProvider(
+            config: AppBarConfig(
+              title: Text(AppEnvironment.instance().config.flavor.appTitle),
+            ),
+
+            child: AppScaffold(
+              body: Row(
+                children: [
+                  Expanded(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(color: Colors.green),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // Status
-                          Text(
-                            _state.isRunning ? 'RUNNING' : 'STOPPED',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // Elapsed
-                          Text(
-                            formatDuration(_state.elapsed) ?? '',
-                            style: Theme.of(context).textTheme.displayMedium,
-                          ),
-
-                          const SizedBox(height: 32),
-
-                          // Controls
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              ElevatedButton(
-                                onPressed: _state.isRunning
-                                    ? null
-                                    : () async {
-                                        await _state.start();
-                                      },
-                                child: const Text('Start'),
-                              ),
-                              const SizedBox(width: 16),
-                              ElevatedButton(
-                                onPressed: _state.isRunning
-                                    ? () async {
-                                        await _state.stop();
-                                      }
-                                    : null,
-                                child: const Text('Stop'),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 32),
-
-                          Row(
-                            spacing: context.theme.spacings.s16,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              PopoverPrimitive(
-                                controller: popoverController,
-                                onRequestClose: popoverController.hide,
-                                width: 520, // Меню шире, чем триггер
-                                trigger: PrimaryButton(
-                                  type: ButtonType.secondary,
-                                  title: 'Comment',
-                                  onTap: popoverController.toggle,
+                          Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                // Status
+                                Text(
+                                  isRunning ? 'RUNNING' : 'STOPPED',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.titleMedium,
                                 ),
-                                contentBuilder: (context) {
-                                  return PopoverSurface(
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.end,
-                                      children: [
-                                        TextArea(
-                                          hintText: 'hintText',
-                                          controller: _textController,
+
+                                const SizedBox(height: 16),
+
+                                // Elapsed
+                                ActiveTimerText(
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.displayMedium,
+                                ),
+
+                                const SizedBox(height: 32),
+
+                                // Controls
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    ElevatedButton(
+                                      onPressed: isRunning
+                                          ? null
+                                          : () async {
+                                              context
+                                                  .read<TimeTrackerBloc>()
+                                                  .add(TimeTrackerStarted());
+                                            },
+                                      child: const Text('Start'),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    ElevatedButton(
+                                      onPressed: isRunning
+                                          ? () async {
+                                              context
+                                                  .read<TimeTrackerBloc>()
+                                                  .add(TimeTrackerStopped());
+                                            }
+                                          : null,
+                                      child: const Text('Stop'),
+                                    ),
+                                  ],
+                                ),
+
+                                const SizedBox(height: 32),
+
+                                Row(
+                                  spacing: context.theme.spacings.s16,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    PopoverPrimitive(
+                                      controller: popoverController,
+                                      onRequestClose: popoverController.hide,
+                                      width: 520, // Меню шире, чем триггер
+                                      trigger: PrimaryButton(
+                                        type: ButtonType.secondary,
+                                        title: 'Comment',
+                                        onTap: popoverController.toggle,
+                                      ),
+                                      contentBuilder: (context) {
+                                        return PopoverSurface(
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.end,
+                                            children: [
+                                              TextArea(
+                                                hintText: 'hintText',
+                                                controller: _textController,
+                                              ),
+                                              PrimaryButton(
+                                                title: 'Save',
+                                                onTap: () {
+                                                  bloc.add(
+                                                    TimeTrackerActiveEntryUpdated(
+                                                      comment:
+                                                          _textController.text,
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                            ],
+                                          ),
+
+                                          // Column(
+                                          //   mainAxisSize: MainAxisSize.min,
+                                          //   children: [
+                                          //     _menuItem(Icons.edit, "Edit task", context),
+                                          //     _menuItem(Icons.copy, "Duplicate", context),
+                                          //     const Divider(height: 1),
+                                          //     _menuItem(
+                                          //       Icons.delete,
+                                          //       "Delete",
+                                          //       context,
+                                          //       isDestructive: true,
+                                          //     ),
+                                          //   ],
+                                          // ),
+                                        );
+                                      },
+                                    ),
+                                    SizedBox(
+                                      width: 200,
+                                      child: Consumer<ProjectTaskState>(
+                                        builder: (context, projectTaskState, child) {
+                                          return Select<String>(
+                                            onChanged: (value) => bloc.add(
+                                              TimeTrackerActiveEntryUpdated(
+                                                projectId: value,
+                                              ),
+                                            ),
+                                            searchable: true,
+                                            placeholder: 'Select project',
+                                            value: activeEntry?.projectId,
+                                            options: projectTaskState.projects
+                                                .map(
+                                                  (p) => SelectOption(
+                                                    value: p.id,
+                                                    label: p.name,
+                                                  ),
+                                                )
+                                                .toList(),
+                                            actionBuilder: (context, query, close) {
+                                              final exactMatchExists =
+                                                  projectTaskState.projects.any(
+                                                    (p) =>
+                                                        p.name.toLowerCase() ==
+                                                        query.toLowerCase(),
+                                                  );
+                                              if (exactMatchExists &&
+                                                  query.isNotEmpty)
+                                                return const SizedBox.shrink();
+
+                                              return SelectCreateAction(
+                                                label: query.isEmpty
+                                                    ? 'Create new project'
+                                                    : 'Create project "$query"',
+                                                onTap: () async {
+                                                  final newProject =
+                                                      await projectTaskState
+                                                          .createProject(
+                                                            query.isEmpty
+                                                                ? 'New project'
+                                                                : query,
+                                                            '',
+                                                          );
+                                                  bloc.add(
+                                                    TimeTrackerActiveEntryUpdated(
+                                                      projectId: newProject.id,
+                                                    ),
+                                                  );
+                                                  close();
+                                                },
+                                              );
+                                            },
+                                          );
+                                        },
+                                      ),
+                                    ),
+
+                                    SizedBox(
+                                      width: 200,
+                                      child: Consumer<ProjectTaskState>(
+                                        builder: (context, projectTaskState, child) {
+                                          return Select<String>(
+                                            onChanged: (value) => bloc.add(
+                                              TimeTrackerActiveEntryUpdated(
+                                                taskId: value,
+                                              ),
+                                            ),
+                                            searchable: true,
+                                            placeholder: 'Select task',
+                                            value: activeEntry?.taskId,
+                                            options: projectTaskState.tasks
+                                                .map(
+                                                  (t) => SelectOption(
+                                                    value: t.id,
+                                                    label: t.title,
+                                                  ),
+                                                )
+                                                .toList(),
+                                            actionBuilder: (context, query, close) {
+                                              final exactMatchExists =
+                                                  projectTaskState.tasks.any(
+                                                    (t) =>
+                                                        t.title.toLowerCase() ==
+                                                        query.toLowerCase(),
+                                                  );
+                                              if (exactMatchExists &&
+                                                  query.isNotEmpty)
+                                                return const SizedBox.shrink();
+
+                                              return SelectCreateAction(
+                                                label: query.isEmpty
+                                                    ? 'Create new task'
+                                                    : 'Create task "$query"',
+                                                onTap: () async {
+                                                  // final newTask =
+                                                  //     await projectTaskState
+                                                  //         .createTask(
+                                                  //           query.isEmpty
+                                                  //               ? 'New task'
+                                                  //               : query,
+                                                  //           activeEntry?.projectId,
+                                                  //         );
+                                                  // bloc.add(
+                                                  //   TimeTrackerActiveEntryUpdated(
+                                                  //     taskId: newTask.id,
+                                                  //   ),
+                                                  // );
+                                                  close();
+                                                },
+                                              );
+                                            },
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          SafeArea(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: PrimaryButton(
+                                onTap: () {
+                                  WorkLogRawDataScope.load(context);
+                                },
+                                title: 'Выбрать сессию',
+                              ),
+                            ),
+                          ),
+                          Text('entries.length ${entries.length}'),
+                          Expanded(
+                            child: entries.isNotEmpty
+                                ? ListView.separated(
+                                    padding: const EdgeInsets.all(16),
+                                    itemBuilder: (context, index) {
+                                      final entry = entries[index];
+                                      return Container(
+                                        decoration: BoxDecoration(
+                                          border: BoxBorder.all(
+                                            color: Colors.black,
+                                            width: 1,
+                                          ),
+                                          borderRadius: const BorderRadius.all(
+                                            Radius.circular(8),
+                                          ),
+                                          color: index != index
+                                              ? Colors.red
+                                              : Colors.blue,
                                         ),
-                                        PrimaryButton(
-                                          title: 'Save',
-                                          onTap: () => _state.updateActive(
-                                            comment: _textController.text,
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(16),
+                                          child: DecoratedBox(
+                                            decoration: BoxDecoration(
+                                              color: Colors.amber,
+                                            ),
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  'Project: ${entry.projectId}',
+                                                ),
+                                                Text('Task: ${entry.taskId}'),
+                                                Text(
+                                                  'Started at: ${entry.startAt}',
+                                                ),
+                                                Text('Status: ${entry.status}'),
+                                                Text(
+                                                  'Comment: ${entry.comment}',
+                                                ),
+                                                entry.endAt != null
+                                                    ? Text(
+                                                        'Duration: ${_formatDuration(entry.endAt!.difference(entry.startAt!))}',
+                                                      )
+                                                    : SizedBox.shrink(),
+                                              ],
+                                            ),
                                           ),
                                         ),
-                                      ],
-                                    ),
-
-                                    // Column(
-                                    //   mainAxisSize: MainAxisSize.min,
-                                    //   children: [
-                                    //     _menuItem(Icons.edit, "Edit task", context),
-                                    //     _menuItem(Icons.copy, "Duplicate", context),
-                                    //     const Divider(height: 1),
-                                    //     _menuItem(
-                                    //       Icons.delete,
-                                    //       "Delete",
-                                    //       context,
-                                    //       isDestructive: true,
-                                    //     ),
-                                    //   ],
-                                    // ),
-                                  );
-                                },
-                              ),
-                              SizedBox(
-                                width: 200,
-                                child: Select<String>(
-                                  onChanged: (value) =>
-                                      _state.updateActive(projectId: value),
-                                  searchable: true,
-                                  placeholder: 'Select project',
-                                  value: _state.activeEntry?.projectId,
-                                  options: [
-                                    SelectOption(
-                                      value: 'value',
-                                      label: 'label1',
-                                    ),
-                                    SelectOption(
-                                      value: 'value',
-                                      label: 'label2',
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                              SizedBox(
-                                width: 200,
-                                child: Select<String>(
-                                  onChanged: (value) =>
-                                      _state.updateActive(taskId: value),
-                                  searchable: true,
-                                  placeholder: 'Select task',
-                                  value: _state.activeEntry?.taskId,
-                                  options: [
-                                    SelectOption(
-                                      value: 'value',
-                                      label: 'label1',
-                                    ),
-                                    SelectOption(
-                                      value: 'value',
-                                      label: 'label2',
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
+                                      );
+                                    },
+                                    separatorBuilder: (context, _) =>
+                                        SizedBox(height: 12),
+                                    itemCount: entries.length,
+                                  )
+                                : Text('Empty'),
                           ),
                         ],
                       ),
                     ),
-
-                    SafeArea(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: PrimaryButton(
-                          onTap: () {
-                            WorkLogRawDataScope.load(context);
-                          },
-                          title: 'Выбрать сессию',
-                        ),
-                      ),
-                    ),
-                    Text('_state.entries.length ${_state.entries.length}'),
-                    Expanded(
-                      child: _state.entries.isNotEmpty
-                          ? ListView.separated(
-                              padding: const EdgeInsets.all(16),
-                              itemBuilder: (context, index) {
-                                final entry = _state.entries[index];
-                                return Container(
-                                  decoration: BoxDecoration(
-                                    border: BoxBorder.all(
-                                      color: Colors.black,
-                                      width: 1,
-                                    ),
-                                    borderRadius: const BorderRadius.all(
-                                      Radius.circular(8),
-                                    ),
-                                    color: index != index
-                                        ? Colors.red
-                                        : Colors.blue,
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(16),
-                                    child: DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        color: Colors.amber,
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text('Project: ${entry.projectId}'),
-                                          Text('Task: ${entry.taskId}'),
-                                          Text('Started at: ${entry.startAt}'),
-                                          Text('Status: ${entry.status}'),
-                                          Text('Comment: ${entry.comment}'),
-                                          entry.endAt != null
-                                              ? Text(
-                                                  'Duration: ${formatDuration(_state.calculateDuration(entry.startAt, entry.endAt))}',
-                                                )
-                                              : SizedBox.shrink(),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                              separatorBuilder: (context, _) =>
-                                  SizedBox(height: 12),
-                              itemCount: _state.entries.length,
-                            )
-                          : Text('Empty'),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
+  }
+
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final hours = twoDigits(duration.inHours);
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return '$hours:$minutes:$seconds';
   }
 }
 

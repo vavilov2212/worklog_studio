@@ -24,7 +24,7 @@ class TimeTrackerService {
   }) async {
     final active = await repository.getActive();
     if (active != null) {
-      stop();
+      throw StateError('A timer is already running. Please stop it first.');
     }
 
     final entry = TimeEntry(
@@ -36,7 +36,7 @@ class TimeTrackerService {
       status: TimeEntryStatus.running,
     );
 
-    repository.insert(entry);
+    await repository.insert(entry);
     return entry;
   }
 
@@ -53,7 +53,7 @@ class TimeTrackerService {
       status: TimeEntryStatus.stopped,
     );
 
-    repository.update(stopped);
+    await repository.update(stopped);
     return stopped;
   }
 
@@ -75,7 +75,7 @@ class TimeTrackerService {
       startAt: startAt,
     );
 
-    repository.update(updated);
+    await repository.update(updated);
     return updated;
   }
 

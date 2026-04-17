@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:worklog_studio/core/environment/app_environment.dart';
 import 'runner/runner.dart' as runner;
 
-FutureOr<void> main() async {
+FutureOr<void> main(List<String> args) async {
   AppEnvironment.init(
     config: const AppConfig(
       debugOptions: DebugOptions(),
@@ -11,5 +11,5 @@ FutureOr<void> main() async {
     ),
   );
 
-  await runner.run();
+  await runner.run(args);
 }

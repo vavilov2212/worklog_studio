@@ -1,64 +1,41 @@
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
-import 'package:path_provider/path_provider.dart';
+
+import 'db_create.dart';
 
 class DatabaseProvider {
   static const _dbName = 'worklog.db';
-  static const _dbVersion = 1;
+  static const _dbVersion = 2; // Incremented for migration
 
   static Database? _db;
 
   static Future<Database> getDatabase() async {
     if (_db != null) return _db!;
 
-    final dir = await getApplicationSupportDirectory();
-    final path = join(dir.path, _dbName);
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, _dbName);
 
-    _db = await openDatabase(path, version: _dbVersion, onCreate: _onCreate);
+    _db = await openDatabase(
+      path,
+      version: _dbVersion,
+      onCreate: onCreate,
+      onUpgrade: _onUpgrade,
+    );
 
     return _db!;
   }
 
-  static Future<void> _onCreate(Database db, int version) async {
-    await db.execute('''
-      CREATE TABLE projects (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        description TEXT NOT NULL,
-        created_at INTEGER NOT NULL,
-        archived_at INTEGER NULL
+  static Future<void> _onUpgrade(
+    Database db,
+    int oldVersion,
+    int newVersion,
+  ) async {
+    if (oldVersion < 2) {
+      await db.execute(
+        '''CREATE UNIQUE INDEX IF NOT EXISTS idx_single_running_entry 
+           ON time_entries(status) 
+           WHERE status = 'running';''',
       );
-    ''');
-
-    await db.execute('''
-      CREATE TABLE tasks (
-        id TEXT PRIMARY KEY,
-        project_id TEXT NOT NULL,
-        title TEXT NOT NULL,
-        description TEXT NOT NULL,
-        status TEXT NOT NULL,
-        created_at INTEGER NOT NULL,
-        completed_at INTEGER NULL
-      );
-    ''');
-
-    await db.execute('''
-      CREATE TABLE time_entries (
-        id TEXT PRIMARY KEY,
-        project_id TEXT NULL,
-        task_id TEXT NULL,
-        comment TEXT NULL,
-        start_at INTEGER NOT NULL,
-        end_at INTEGER NULL,
-        status TEXT NOT NULL
-      );
-    ''');
-
-    await db.execute(
-      'CREATE INDEX idx_time_entries_status ON time_entries(status);',
-    );
-    await db.execute(
-      'CREATE INDEX idx_time_entries_start_at ON time_entries(start_at);',
-    );
+    }
   }
 }

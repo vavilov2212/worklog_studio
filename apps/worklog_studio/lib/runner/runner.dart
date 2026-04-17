@@ -18,17 +18,27 @@ import 'package:worklog_studio/feature/app/layout/app_bar/app_bar_service.dart';
 import 'package:worklog_studio/firebase_options.dart';
 import 'package:worklog_studio_style_system/ui_kit/ui_kit.dart';
 
-Future<void> run() async {
+import 'dart:convert';
+
+import 'package:worklog_studio/feature/app/app.dart';
+
+Future<void> run(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint('Firebase already initialized: $e');
+  }
 
   // 🔑 ВАЖНО: для desktop / VM
-  if (!kIsWeb) {
-    if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
-      sqfliteFfiInit();
-      databaseFactory = databaseFactoryFfi;
-    }
+  if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
   }
+
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(statusBarColor: Colors.transparent),
@@ -40,7 +50,39 @@ Future<void> run() async {
   _initDependencies();
   _initRepositories();
 
-  runApp(App());
+  String? initialRoute;
+  bool isPopover = false;
+  if (Platform.isMacOS) {
+    try {
+      const channel = MethodChannel('worklog_studio/ipc');
+      final engineInfo = await channel
+          .invokeMapMethod<String, dynamic>('getEngineInfo')
+          .timeout(
+            const Duration(seconds: 1),
+            onTimeout: () {
+              debugPrint('getEngineInfo timed out!');
+              return {'role': 'main'}; // default fallback
+            },
+          );
+
+      final role = engineInfo?['role'] as String? ?? 'main';
+      debugPrint('Successfully resolved engine role: $role');
+
+      if (role == 'tray') {
+        initialRoute = '/mini';
+        isPopover = true;
+      }
+    } catch (e) {
+      debugPrint('Failed to fetch engine info: $e');
+    }
+  }
+
+  debugPrint('runApp starting with initialRoute: $initialRoute');
+  if (isPopover) {
+    runApp(const MiniApp());
+  } else {
+    runApp(MainApp(initialRoute: initialRoute));
+  }
 }
 
 void _initDependencies() async {

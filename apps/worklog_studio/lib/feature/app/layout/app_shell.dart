@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:worklog_studio/domain/project.dart';
+import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/feature/settings/settings_screen.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/feature/home/presentation/home_page.dart';
 import 'package:worklog_studio/feature/projects/presentation/projects_page.dart';
 import 'package:worklog_studio/feature/tasks/presentation/tasks_page.dart';
 import 'package:worklog_studio/feature/history/presentation/history_page.dart';
-import 'package:worklog_studio/state/time_tracker_state.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
+import 'package:worklog_studio/feature/time_tracker/presentation/components/active_timer_text.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
-import 'package:worklog_studio/domain/project.dart';
-import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/feature/home/data/mock_data.dart' as mock;
+
+import 'package:worklog_studio/core/services/desktop/desktop_service.dart';
+import 'dart:async';
 
 enum AppRoute { dashboard, history, projects, tasks, settings }
 
@@ -23,6 +27,23 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   AppRoute _currentRoute = AppRoute.dashboard;
+  StreamSubscription<String>? _navSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _navSub = DesktopService().navigationStream.listen((route) {
+      if (route == 'history') {
+        _onRouteSelected(AppRoute.history);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _navSub?.cancel();
+    super.dispose();
+  }
 
   void _onRouteSelected(AppRoute route) {
     setState(() {
@@ -133,8 +154,6 @@ class GlobalTimeTrackerPanel extends StatefulWidget {
 }
 
 class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
-  String? _selectedProjectId;
-  String? _selectedTaskId;
   final TextEditingController _commentController = TextEditingController();
   final PopoverController _commentPopoverController = PopoverController();
 
@@ -157,133 +176,156 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
   Widget build(BuildContext context) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
-    final state = context.watch<TimeTrackerState>();
+    final projectTaskState = context.read<ProjectTaskState>();
 
-    final isRunning = state.isRunning;
-    final activeEntry = state.activeEntry;
+    return BlocListener<TimeTrackerBloc, TimeTrackerBlocState>(
+      listenWhen: (previous, current) =>
+          previous.activeEntryOrNull != current.activeEntryOrNull,
+      listener: (context, state) {
+        final activeEntry = state.activeEntryOrNull;
+        if (activeEntry != null) {
+          projectTaskState.updateDraft(
+            projectId: activeEntry.projectId,
+            taskId: activeEntry.taskId,
+            comment: activeEntry.comment ?? '',
+          );
+          if (_commentController.text != (activeEntry.comment ?? '')) {
+            _commentController.text = activeEntry.comment ?? '';
+          }
+        }
+      },
+      child: BlocBuilder<TimeTrackerBloc, TimeTrackerBlocState>(
+        buildWhen: (previous, current) =>
+            previous.isRunning != current.isRunning ||
+            previous.activeEntryOrNull != current.activeEntryOrNull,
+        builder: (context, state) {
+          final isRunning = state.isRunning;
+          final draftProjectId = context.select<ProjectTaskState, String?>(
+            (s) => s.draftProjectId,
+          );
+          final draftTaskId = context.select<ProjectTaskState, String?>(
+            (s) => s.draftTaskId,
+          );
 
-    // Sync local state with active entry if running
-    if (isRunning && activeEntry != null) {
-      if (_selectedProjectId != activeEntry.projectId) {
-        _selectedProjectId = activeEntry.projectId;
-      }
-      if (_selectedTaskId != activeEntry.taskId) {
-        _selectedTaskId = activeEntry.taskId;
-      }
-      if (_commentController.text != (activeEntry.comment ?? '')) {
-        _commentController.text = activeEntry.comment ?? '';
-      }
-    }
-
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: theme.spacings.s24,
-        vertical: theme.spacings.s16,
-      ),
-      decoration: BoxDecoration(
-        color: palette.background.surface,
-        borderRadius: theme.radiuses.lg.circular,
-        border: Border.all(
-          color: isRunning ? palette.accent.primary : palette.border.primary,
-          width: isRunning ? 2 : 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Expanded(
-            flex: 2,
-            child: _buildProjectSelector(context, isRunning, state),
-          ),
-          SizedBox(width: theme.spacings.s16),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: Container(
-              width: 1,
-              height: 32,
-              color: palette.border.primary,
+          return Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: theme.spacings.s24,
+              vertical: theme.spacings.s16,
             ),
-          ),
-          SizedBox(width: theme.spacings.s16),
-          Expanded(
-            flex: 2,
-            child: _buildTaskSelector(context, isRunning, state),
-          ),
-          SizedBox(width: theme.spacings.s16),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: Container(
-              width: 1,
-              height: 32,
-              color: palette.border.primary,
-            ),
-          ),
-          SizedBox(width: theme.spacings.s16),
-          Expanded(
-            flex: 4,
-            child: _buildCommentInput(context, isRunning, state),
-          ),
-          SizedBox(width: theme.spacings.s24),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(' ', style: theme.commonTextStyles.caption3Bold),
-              SizedBox(height: theme.spacings.s8),
-              Text(
-                _formatDuration(state.elapsed),
-                style: theme.commonTextStyles.h1.copyWith(
-                  color: isRunning
-                      ? palette.accent.primary
-                      : palette.text.muted,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
+            decoration: BoxDecoration(
+              color: palette.background.surface,
+              borderRadius: theme.radiuses.lg.circular,
+              border: Border.all(
+                color: isRunning
+                    ? palette.accent.primary
+                    : palette.border.primary,
+                width: isRunning ? 2 : 1,
               ),
-            ],
-          ),
-          SizedBox(width: theme.spacings.s24),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(' ', style: theme.commonTextStyles.caption3Bold),
-              SizedBox(height: theme.spacings.s8),
-              isRunning
-                  ? PrimaryButton(
-                      title: 'STOP',
-                      leftIcon: WorklogStudioAssets.vectors.square24Svg,
-                      backgroundColor: palette.accent.danger,
-                      onTap: () {
-                        state.stop();
-                        setState(() {
-                          _selectedProjectId = null;
-                          _selectedTaskId = null;
-                          _commentController.clear();
-                        });
-                      },
-                    )
-                  : PrimaryButton(
-                      title: 'START',
-                      leftIcon: WorklogStudioAssets.vectors.playerPlay24Svg,
-                      onTap: () {
-                        state.start(
-                          projectId: _selectedProjectId,
-                          taskId: _selectedTaskId,
-                          comment: _commentController.text.isNotEmpty
-                              ? _commentController.text
-                              : null,
-                        );
-                      },
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: _buildProjectSelector(
+                    context,
+                    isRunning,
+                    draftProjectId,
+                  ),
+                ),
+                SizedBox(width: theme.spacings.s16),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Container(
+                    width: 1,
+                    height: 32,
+                    color: palette.border.primary,
+                  ),
+                ),
+                SizedBox(width: theme.spacings.s16),
+                Expanded(
+                  flex: 2,
+                  child: _buildTaskSelector(context, isRunning, draftTaskId),
+                ),
+                SizedBox(width: theme.spacings.s16),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Container(
+                    width: 1,
+                    height: 32,
+                    color: palette.border.primary,
+                  ),
+                ),
+                SizedBox(width: theme.spacings.s16),
+                Expanded(
+                  flex: 4,
+                  child: _buildCommentInput(context, isRunning, draftTaskId),
+                ),
+                SizedBox(width: theme.spacings.s24),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(' ', style: theme.commonTextStyles.caption3Bold),
+                    SizedBox(height: theme.spacings.s8),
+                    ActiveTimerText(
+                      style: theme.commonTextStyles.h1.copyWith(
+                        color: isRunning
+                            ? palette.accent.primary
+                            : palette.text.muted,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
                     ),
-            ],
-          ),
-        ],
+                  ],
+                ),
+                SizedBox(width: theme.spacings.s24),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(' ', style: theme.commonTextStyles.caption3Bold),
+                    SizedBox(height: theme.spacings.s8),
+                    isRunning
+                        ? PrimaryButton(
+                            title: 'STOP',
+                            leftIcon: WorklogStudioAssets.vectors.square24Svg,
+                            backgroundColor: palette.accent.danger,
+                            onTap: () {
+                              context.read<TimeTrackerBloc>().add(
+                                TimeTrackerStopped(),
+                              );
+                              projectTaskState.clearDraft();
+                              _commentController.clear();
+                            },
+                          )
+                        : PrimaryButton(
+                            title: 'START',
+                            leftIcon:
+                                WorklogStudioAssets.vectors.playerPlay24Svg,
+                            onTap: () {
+                              context.read<TimeTrackerBloc>().add(
+                                TimeTrackerStarted(
+                                  projectId: draftProjectId,
+                                  taskId: draftTaskId,
+                                  comment: _commentController.text.isNotEmpty
+                                      ? _commentController.text
+                                      : null,
+                                ),
+                              );
+                            },
+                          ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -291,18 +333,18 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
   Widget _buildProjectSelector(
     BuildContext context,
     bool isRunning,
-    TimeTrackerState state,
+    String? selectedId,
   ) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
-    final projectTaskState = context.watch<ProjectTaskState>();
+    final projectTaskState = context.read<ProjectTaskState>();
+    final projects = context.select<ProjectTaskState, List<Project>>(
+      (s) => s.projects,
+    );
 
-    final options = [
-      SelectOption(value: 'create_new', label: '+ Create Project'),
-      ...projectTaskState.projects.map(
-        (p) => SelectOption(value: p.id, label: p.name),
-      ),
-    ];
+    final options = projects
+        .map((p) => SelectOption(value: p.id, label: p.name))
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -316,107 +358,51 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
         ),
         SizedBox(height: theme.spacings.s8),
         Select<String>(
-          value: _selectedProjectId,
+          value: selectedId,
           placeholder: 'Select Project',
           searchable: true,
           options: options,
-          onChanged: (value) async {
-            if (value == 'create_new') {
-              // Trigger creation flow
-              final newProject = await _showCreateProjectDialog(
-                context,
-                projectTaskState,
-              );
-              if (newProject != null) {
-                setState(() {
-                  _selectedProjectId = newProject.id;
-                });
+          actionBuilder: (context, query, close) {
+            final exactMatchExists = projects.any(
+              (p) => p.name.toLowerCase() == query.toLowerCase(),
+            );
+            if (exactMatchExists && query.isNotEmpty)
+              return const SizedBox.shrink();
+
+            return SelectCreateAction(
+              label: query.isEmpty
+                  ? 'Create new project'
+                  : 'Create project "$query"',
+              onTap: () async {
+                final newProject = await projectTaskState.createProject(
+                  query.isEmpty ? 'New project' : query,
+                  '',
+                );
+                projectTaskState.updateDraft(projectId: newProject.id);
                 if (isRunning) {
-                  state.updateActive(
-                    projectId: newProject.id,
-                    taskId: _selectedTaskId,
-                    comment: _commentController.text,
+                  context.read<TimeTrackerBloc>().add(
+                    TimeTrackerActiveEntryUpdated(
+                      projectId: newProject.id,
+                      taskId: projectTaskState.draftTaskId,
+                      comment: _commentController.text,
+                    ),
                   );
                 }
-              }
-              return;
-            }
-
-            setState(() {
-              _selectedProjectId = value;
-            });
+                close();
+              },
+            );
+          },
+          onChanged: (value) async {
+            projectTaskState.updateDraft(projectId: value);
             if (isRunning) {
-              state.updateActive(
-                projectId: value,
-                taskId: _selectedTaskId,
-                comment: _commentController.text,
+              context.read<TimeTrackerBloc>().add(
+                TimeTrackerActiveEntryUpdated(
+                  projectId: value,
+                  taskId: projectTaskState.draftTaskId,
+                  comment: _commentController.text,
+                ),
               );
             }
-          },
-          triggerBuilder: (context, selectedOption, isOpen) {
-            return MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: theme.spacings.s12,
-                  vertical: theme.spacings.s12,
-                ),
-                decoration: BoxDecoration(
-                  borderRadius: theme.radiuses.md.circular,
-                  color: isOpen
-                      ? palette.background.surfaceMuted
-                      : Colors.transparent,
-                  border: Border.all(color: Colors.transparent),
-                ),
-                child: Row(
-                  children: [
-                    if (selectedOption == null ||
-                        selectedOption.value == 'create_new')
-                      Icon(
-                        Icons.add_circle_outline,
-                        size: 16,
-                        color: palette.text.muted,
-                      )
-                    else
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: palette.accent.primary,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    SizedBox(width: theme.spacings.s8),
-                    Expanded(
-                      child: Text(
-                        selectedOption?.label ?? 'Select Project',
-                        style: theme.commonTextStyles.body.copyWith(
-                          color:
-                              selectedOption != null &&
-                                  selectedOption.value != 'create_new'
-                              ? (isRunning
-                                    ? palette.accent.primary
-                                    : palette.text.primary)
-                              : palette.text.muted,
-                          fontWeight:
-                              selectedOption != null &&
-                                  selectedOption.value != 'create_new'
-                              ? FontWeight.w600
-                              : FontWeight.normal,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Icon(
-                      Icons.unfold_more,
-                      size: 18,
-                      color: palette.text.muted,
-                    ),
-                  ],
-                ),
-              ),
-            );
           },
         ),
       ],
@@ -426,22 +412,23 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
   Widget _buildTaskSelector(
     BuildContext context,
     bool isRunning,
-    TimeTrackerState state,
+    String? selectedId,
   ) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
-    final projectTaskState = context.watch<ProjectTaskState>();
+    final projectTaskState = context.read<ProjectTaskState>();
+    final tasks = context.select<ProjectTaskState, List<Task>>((s) => s.tasks);
+    final draftProjectId = context.select<ProjectTaskState, String?>(
+      (s) => s.draftProjectId,
+    );
 
-    final filteredTasks = _selectedProjectId != null
-        ? projectTaskState.tasks
-              .where((t) => t.projectId == _selectedProjectId)
-              .toList()
-        : projectTaskState.tasks;
+    final filteredTasks = draftProjectId != null
+        ? tasks.where((t) => t.projectId == draftProjectId).toList()
+        : tasks;
 
-    final options = [
-      SelectOption(value: 'create_new', label: '+ Create Task'),
-      ...filteredTasks.map((t) => SelectOption(value: t.id, label: t.title)),
-    ];
+    final options = filteredTasks
+        .map((t) => SelectOption(value: t.id, label: t.title))
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -455,203 +442,81 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
         ),
         SizedBox(height: theme.spacings.s8),
         Select<String>(
-          value: _selectedTaskId,
+          value: selectedId,
           placeholder: 'Select Task',
           searchable: true,
           options: options,
-          onChanged: (value) async {
-            if (value == 'create_new') {
-              if (_selectedProjectId == null) {
-                // Cannot create task without project
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Please select a project first'),
-                  ),
+          actionBuilder: (context, query, close) {
+            final exactMatchExists = tasks.any(
+              (t) =>
+                  t.title.toLowerCase() == query.toLowerCase() &&
+                  t.projectId == draftProjectId,
+            );
+            if (exactMatchExists && query.isNotEmpty)
+              return const SizedBox.shrink();
+
+            return SelectCreateAction(
+              label: query.isEmpty ? 'Create new task' : 'Create task "$query"',
+              onTap: () async {
+                if (draftProjectId == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please select a project first'),
+                    ),
+                  );
+                  return;
+                }
+                final newTask = await projectTaskState.createTask(
+                  draftProjectId,
+                  query.isEmpty ? 'New task' : query,
+                  '',
                 );
-                return;
-              }
-              // Trigger creation flow
-              final newTask = await _showCreateTaskDialog(
-                context,
-                projectTaskState,
-                _selectedProjectId!,
-              );
-              if (newTask != null) {
-                setState(() {
-                  _selectedTaskId = newTask.id;
-                });
+                projectTaskState.updateDraft(taskId: newTask.id);
                 if (isRunning) {
-                  state.updateActive(
-                    projectId: _selectedProjectId,
-                    taskId: newTask.id,
-                    comment: _commentController.text,
+                  context.read<TimeTrackerBloc>().add(
+                    TimeTrackerActiveEntryUpdated(
+                      projectId: draftProjectId,
+                      taskId: newTask.id,
+                      comment: _commentController.text,
+                    ),
                   );
                 }
-              }
-              return;
+                close();
+              },
+            );
+          },
+          onChanged: (value) async {
+            if (value == null) {
+              projectTaskState.updateDraft(clearTaskId: true);
+            } else {
+              projectTaskState.updateDraft(taskId: value);
             }
-
-            setState(() {
-              _selectedTaskId = value;
-            });
             if (isRunning) {
-              state.updateActive(
-                projectId: _selectedProjectId,
-                taskId: value,
-                comment: _commentController.text,
+              context.read<TimeTrackerBloc>().add(
+                TimeTrackerActiveEntryUpdated(
+                  projectId: draftProjectId,
+                  taskId: value,
+                  comment: _commentController.text,
+                ),
               );
             }
-          },
-          triggerBuilder: (context, selectedOption, isOpen) {
-            return MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: theme.spacings.s12,
-                  vertical: theme.spacings.s12,
-                ),
-                decoration: BoxDecoration(
-                  borderRadius: theme.radiuses.md.circular,
-                  color: isOpen
-                      ? palette.background.surfaceMuted
-                      : Colors.transparent,
-                  border: Border.all(color: Colors.transparent),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        selectedOption?.label ?? 'Select Task',
-                        style: theme.commonTextStyles.body.copyWith(
-                          color:
-                              selectedOption != null &&
-                                  selectedOption.value != 'create_new'
-                              ? palette.text.primary
-                              : palette.text.muted,
-                          fontWeight:
-                              selectedOption != null &&
-                                  selectedOption.value != 'create_new'
-                              ? FontWeight.w600
-                              : FontWeight.normal,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Icon(
-                      Icons.unfold_more,
-                      size: 18,
-                      color: palette.text.muted,
-                    ),
-                  ],
-                ),
-              ),
-            );
           },
         ),
       ],
     );
   }
 
-  Future<Project?> _showCreateProjectDialog(
-    BuildContext context,
-    ProjectTaskState state,
-  ) async {
-    final nameController = TextEditingController();
-    final descController = TextEditingController();
-    return showDialog<Project>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Create Project'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: 'Name'),
-            ),
-            TextField(
-              controller: descController,
-              decoration: const InputDecoration(labelText: 'Description'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              if (nameController.text.isNotEmpty) {
-                final project = await state.createProject(
-                  nameController.text,
-                  descController.text,
-                );
-                Navigator.pop(context, project);
-              }
-            },
-            child: const Text('Create'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<Task?> _showCreateTaskDialog(
-    BuildContext context,
-    ProjectTaskState state,
-    String projectId,
-  ) async {
-    final titleController = TextEditingController();
-    final descController = TextEditingController();
-    return showDialog<Task>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Create Task'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titleController,
-              decoration: const InputDecoration(labelText: 'Title'),
-            ),
-            TextField(
-              controller: descController,
-              decoration: const InputDecoration(labelText: 'Description'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              if (titleController.text.isNotEmpty) {
-                final task = await state.createTask(
-                  projectId,
-                  titleController.text,
-                  descController.text,
-                );
-                Navigator.pop(context, task);
-              }
-            },
-            child: const Text('Create'),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildCommentInput(
     BuildContext context,
     bool isRunning,
-    TimeTrackerState state,
+    String? selectedId,
   ) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
+    final projectTaskState = context.read<ProjectTaskState>();
+    final draftProjectId = context.select<ProjectTaskState, String?>(
+      (s) => s.draftProjectId,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -700,10 +565,12 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
               onClose: () => _commentPopoverController.hide(),
               onSubmitted: (value) {
                 if (isRunning) {
-                  state.updateActive(
-                    projectId: _selectedProjectId,
-                    taskId: _selectedTaskId,
-                    comment: value,
+                  context.read<TimeTrackerBloc>().add(
+                    TimeTrackerActiveEntryUpdated(
+                      projectId: draftProjectId,
+                      taskId: projectTaskState.draftTaskId,
+                      comment: value,
+                    ),
                   );
                 }
               },

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:worklog_studio/feature/tasks/presentation/components/tasks_card.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/domain/task.dart';
-import 'package:worklog_studio/state/project_task_state.dart';
-import 'components/tasks_card.dart';
+import 'package:worklog_studio/domain/resolved_task.dart';
+import 'package:worklog_studio/state/entity_resolver.dart';
 import 'components/tasks_drawer.dart';
 
 class TasksScreen extends StatefulWidget {
@@ -47,14 +48,15 @@ class _TasksScreenState extends State<TasksScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final projectTaskState = context.watch<ProjectTaskState>();
+    final resolver = context.watch<EntityResolver>();
+    final resolvedTasks = resolver.getResolvedTasks();
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
           child: TaskList(
-            tasks: projectTaskState.tasks,
+            tasks: resolvedTasks,
             selectedTask: selectedTask,
             onTaskSelected: _handleTaskSelected,
             onCreateTask: _handleCreateTask,
@@ -72,7 +74,7 @@ class _TasksScreenState extends State<TasksScreen> {
 }
 
 class TaskList extends StatelessWidget {
-  final List<Task> tasks;
+  final List<ResolvedTask> tasks;
   final Task? selectedTask;
   final ValueChanged<Task> onTaskSelected;
   final VoidCallback onCreateTask;
@@ -107,7 +109,7 @@ class TaskList extends StatelessWidget {
                   ),
                   SizedBox(height: theme.spacings.s4),
                   Text(
-                    '12 active tasks for this week',
+                    '${tasks.where((t) => t.status == TaskStatus.open).length} active tasks',
                     style: theme.commonTextStyles.body.copyWith(
                       color: palette.text.secondary,
                     ),
@@ -130,7 +132,7 @@ class TaskList extends StatelessWidget {
               return TaskCard(
                 task: task,
                 isSelected: isSelected,
-                onTap: () => onTaskSelected(task),
+                onTap: () => onTaskSelected(task.task),
               );
             }).toList(),
           ),
