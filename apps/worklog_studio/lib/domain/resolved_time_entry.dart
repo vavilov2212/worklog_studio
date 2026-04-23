@@ -10,7 +10,9 @@ class ResolvedTimeEntry {
   const ResolvedTimeEntry({required this.entry, this.task, this.project});
 
   String get taskTitle => task?.title ?? 'Unassigned Task';
+  String? get taskId => task?.id;
   String get projectName => project?.name ?? 'No Project';
+  String? get projectId => project?.id;
 
   String get id => entry.id;
   bool get isRunning => entry.isRunning;
@@ -18,4 +20,12 @@ class ResolvedTimeEntry {
   DateTime? get endAt => entry.endAt;
 
   Duration duration(DateTime now) => entry.duration(now);
+
+  ResolvedTimeEntry copyWith({TimeEntry? entry, Task? task, Project? project}) {
+    return ResolvedTimeEntry(
+      entry: entry ?? this.entry,
+      task: task ?? this.task,
+      project: project ?? this.project,
+    );
+  }
 }

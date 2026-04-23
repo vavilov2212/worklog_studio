@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide DrawerControllerState;
 import 'package:provider/provider.dart';
 import 'package:collection/collection.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
@@ -8,6 +8,7 @@ import 'package:worklog_studio/state/entity_resolver.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
 import 'components/time_entry_card.dart';
 import 'components/time_entry_drawer.dart';
+import 'package:worklog_studio/feature/common/presentation/drawer_controller_state.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -17,33 +18,29 @@ class HistoryScreen extends StatefulWidget {
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
-  TimeEntry? selectedEntry;
+  DrawerControllerState<TimeEntry> _drawerState =
+      DrawerControllerState.closed();
 
   void _handleCreateEntry() {
-    final now = DateTime.now();
     setState(() {
-      selectedEntry = TimeEntry(
-        id: '',
-        startAt: now,
-        endAt: now.add(const Duration(hours: 1)),
-        status: TimeEntryStatus.stopped,
-      );
+      _drawerState = DrawerControllerState.create();
     });
   }
 
   void _handleEntrySelected(TimeEntry entry) {
     setState(() {
-      if (selectedEntry?.id == entry.id) {
-        selectedEntry = null; // Toggle off if clicking the same entry
+      if (_drawerState.state == DrawerState.edit &&
+          _drawerState.entity?.id == entry.id) {
+        _drawerState = DrawerControllerState.closed(); // Toggle off
       } else {
-        selectedEntry = entry;
+        _drawerState = DrawerControllerState.edit(entry);
       }
     });
   }
 
   void _closePanel() {
     setState(() {
-      selectedEntry = null;
+      _drawerState = DrawerControllerState.closed();
     });
   }
 
@@ -55,27 +52,28 @@ class _HistoryScreenState extends State<HistoryScreen> {
       builder: (context, resolvedEntries, child) {
         ResolvedTimeEntry? resolvedSelectedEntry;
 
-        if (selectedEntry != null) {
+        if (_drawerState.entity != null) {
           resolvedSelectedEntry = resolvedEntries.firstWhereOrNull(
-            (e) => e.entry.id == selectedEntry!.id,
+            (e) => e.entry.id == _drawerState.entity!.id,
           );
 
           // If it's a new entry (not yet in state), we resolve it manually
-          if (resolvedSelectedEntry == null && selectedEntry!.id.isEmpty) {
+          if (resolvedSelectedEntry == null &&
+              _drawerState.entity!.id.isEmpty) {
             final projectTaskState = context.read<ProjectTaskState>();
-            final task = selectedEntry!.taskId != null
+            final task = _drawerState.entity!.taskId != null
                 ? projectTaskState.tasks
-                      .where((t) => t.id == selectedEntry!.taskId)
+                      .where((t) => t.id == _drawerState.entity!.taskId)
                       .firstOrNull
                 : null;
-            final project = selectedEntry!.projectId != null
+            final project = _drawerState.entity!.projectId != null
                 ? projectTaskState.projects
-                      .where((p) => p.id == selectedEntry!.projectId)
+                      .where((p) => p.id == _drawerState.entity!.projectId)
                       .firstOrNull
                 : null;
 
             resolvedSelectedEntry = ResolvedTimeEntry(
-              entry: selectedEntry!,
+              entry: _drawerState.entity!,
               task: task,
               project: project,
             );
@@ -89,16 +87,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
             Expanded(
               child: TimeEntryList(
                 entries: resolvedEntries,
-                selectedEntry: selectedEntry,
+                selectedEntry: _drawerState.entity,
                 onEntrySelected: _handleEntrySelected,
                 onCreateEntry: _handleCreateEntry,
               ),
             ),
             TimeEntryDrawer(
-              resolvedEntry: resolvedSelectedEntry,
-              isOpen: resolvedSelectedEntry != null,
+              resolvedEntry: _drawerState.entity != null
+                  ? resolvedEntries.firstWhereOrNull(
+                      (e) => e.entry.id == _drawerState.entity!.id,
+                    )
+                  : null,
+              isOpen: _drawerState.isOpen,
               onClose: _closePanel,
-              isNew: selectedEntry != null && selectedEntry!.id.isEmpty,
             ),
           ],
         );

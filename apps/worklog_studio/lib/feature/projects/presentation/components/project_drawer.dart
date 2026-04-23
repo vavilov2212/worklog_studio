@@ -15,7 +15,6 @@ class ProjectDrawer extends StatefulWidget {
   final bool isOpen;
   final VoidCallback onClose;
   final DrawerMode mode;
-  final bool isNew;
 
   const ProjectDrawer({
     super.key,
@@ -23,7 +22,6 @@ class ProjectDrawer extends StatefulWidget {
     required this.isOpen,
     required this.onClose,
     this.mode = DrawerMode.push,
-    required this.isNew,
   });
 
   @override
@@ -32,6 +30,7 @@ class ProjectDrawer extends StatefulWidget {
 
 class _ProjectDrawerState extends State<ProjectDrawer> {
   bool _isConfirmingDelete = false;
+  late Project _draft;
   late TextEditingController _nameController;
   late TextEditingController _descriptionController;
   final InlineFieldController _nameFieldController = InlineFieldController();
@@ -41,14 +40,27 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
   @override
   void initState() {
     super.initState();
+    _initDraft();
     _initControllers();
   }
 
+  void _initDraft() {
+    if (widget.project != null) {
+      _draft = widget.project!;
+    } else {
+      _draft = Project(
+        id: '',
+        name: '',
+        description: '',
+        createdAt: DateTime.now(),
+        status: ProjectStatus.open,
+      );
+    }
+  }
+
   void _initControllers() {
-    _nameController = TextEditingController(text: widget.project?.name ?? '');
-    _descriptionController = TextEditingController(
-      text: widget.project?.description ?? '',
-    );
+    _nameController = TextEditingController(text: _draft.name);
+    _descriptionController = TextEditingController(text: _draft.description);
   }
 
   @override
@@ -57,24 +69,18 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
     if (!widget.isOpen && oldWidget.isOpen) {
       _isConfirmingDelete = false;
     }
-    if (widget.project != oldWidget.project) {
+    if (widget.project != oldWidget.project ||
+        widget.isOpen != oldWidget.isOpen) {
+      _initDraft();
       _initControllers();
     }
   }
 
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _descriptionController.dispose();
-    _nameFieldController.dispose();
-    _descriptionFieldController.dispose();
-    super.dispose();
-  }
-
-  bool get _isNew => widget.isNew;
+  bool get _isNew => widget.project == null;
 
   void _handleSave() async {
     final state = context.read<ProjectTaskState>();
+
     if (_isNew) {
       if (_nameController.text.isNotEmpty) {
         await state.createProject(
@@ -84,8 +90,8 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
         widget.onClose();
       }
     } else {
-      if (widget.project != null && _nameController.text.isNotEmpty) {
-        final updatedProject = widget.project!.copyWith(
+      if (_nameController.text.isNotEmpty) {
+        final updatedProject = _draft.copyWith(
           name: _nameController.text,
           description: _descriptionController.text,
         );
@@ -120,7 +126,7 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
                 });
               },
       ),
-      body: widget.project == null
+      body: _draft == null
           ? const SizedBox.shrink()
           : Column(
               children: [

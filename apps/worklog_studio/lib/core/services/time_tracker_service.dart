@@ -84,7 +84,10 @@ class TimeTrackerService {
   }
 
   Future<void> createEntry(TimeEntry entry) async {
-    await repository.insert(entry);
+    final entryToInsert = entry.id.isEmpty
+        ? entry.copyWith(id: _uuid.v4())
+        : entry;
+    await repository.insert(entryToInsert);
   }
 
   Future<void> updateEntry(TimeEntry entry) async {

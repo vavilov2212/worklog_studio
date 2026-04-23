@@ -1,11 +1,12 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide DrawerControllerState;
 import 'package:provider/provider.dart';
-import 'package:worklog_studio/feature/tasks/presentation/components/tasks_card.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/domain/resolved_task.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
+import 'components/tasks_card.dart';
 import 'components/tasks_drawer.dart';
+import 'package:worklog_studio/feature/common/presentation/drawer_controller_state.dart';
 
 class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
@@ -15,34 +16,28 @@ class TasksScreen extends StatefulWidget {
 }
 
 class _TasksScreenState extends State<TasksScreen> {
-  Task? selectedTask;
+  DrawerControllerState<Task> _drawerState = DrawerControllerState.closed();
 
   void _handleTaskSelected(Task task) {
     setState(() {
-      if (selectedTask?.id == task.id) {
-        selectedTask = null; // Toggle off
+      if (_drawerState.state == DrawerState.edit &&
+          _drawerState.entity?.id == task.id) {
+        _drawerState = DrawerControllerState.closed();
       } else {
-        selectedTask = task;
+        _drawerState = DrawerControllerState.edit(task);
       }
     });
   }
 
   void _handleCreateTask() {
     setState(() {
-      selectedTask = Task(
-        id: '',
-        projectId: '',
-        title: '',
-        description: '',
-        status: TaskStatus.open,
-        createdAt: DateTime.now(),
-      );
+      _drawerState = DrawerControllerState.create();
     });
   }
 
   void _closePanel() {
     setState(() {
-      selectedTask = null;
+      _drawerState = DrawerControllerState.closed();
     });
   }
 
@@ -57,16 +52,15 @@ class _TasksScreenState extends State<TasksScreen> {
         Expanded(
           child: TaskList(
             tasks: resolvedTasks,
-            selectedTask: selectedTask,
+            selectedTask: _drawerState.entity,
             onTaskSelected: _handleTaskSelected,
             onCreateTask: _handleCreateTask,
           ),
         ),
         TaskDrawer(
-          task: selectedTask,
-          isOpen: selectedTask != null,
+          task: _drawerState.entity,
+          isOpen: _drawerState.isOpen,
           onClose: _closePanel,
-          isNew: selectedTask != null && selectedTask!.id.isEmpty,
         ),
       ],
     );

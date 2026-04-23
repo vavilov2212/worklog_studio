@@ -6,6 +6,7 @@ import 'package:worklog_studio/feature/common/presentation/components/inline_fie
 import 'package:worklog_studio/feature/common/presentation/resizable_drawer.dart';
 import 'package:worklog_studio/feature/common/presentation/components/inline_field.dart';
 import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
+import 'package:worklog_studio/state/entity_resolver.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/feature/common/presentation/components/entity_meta_info_row.dart';
@@ -17,7 +18,6 @@ class TimeEntryDrawer extends StatefulWidget {
   final bool isOpen;
   final VoidCallback onClose;
   final DrawerMode mode;
-  final bool isNew;
 
   const TimeEntryDrawer({
     super.key,
@@ -25,7 +25,6 @@ class TimeEntryDrawer extends StatefulWidget {
     required this.isOpen,
     required this.onClose,
     this.mode = DrawerMode.push,
-    required this.isNew,
   });
 
   @override
@@ -34,6 +33,7 @@ class TimeEntryDrawer extends StatefulWidget {
 
 class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
   bool _isConfirmingDelete = false;
+  late ResolvedTimeEntry _draft;
   late TextEditingController _commentController;
   late TextEditingController _startTimeController;
   late TextEditingController _endTimeController;
@@ -43,26 +43,42 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
   final InlineFieldController _startTimeFieldController =
       InlineFieldController();
   final InlineFieldController _endTimeFieldController = InlineFieldController();
-  String? _selectedProjectId;
-  String? _selectedTaskId;
 
   @override
   void initState() {
     super.initState();
+    _initDraft();
     _initControllers();
   }
 
+  void _initDraft() {
+    if (widget.resolvedEntry != null) {
+      _draft = widget.resolvedEntry!;
+    } else {
+      final now = DateTime.now();
+      _draft = ResolvedTimeEntry(
+        entry: TimeEntry(
+          id: '',
+          startAt: now,
+          endAt: now.add(const Duration(hours: 1)),
+          status: TimeEntryStatus.stopped,
+        ),
+        project: null,
+        task: null,
+      );
+    }
+  }
+
   void _initControllers() {
-    final entry = widget.resolvedEntry?.entry;
-    _commentController = TextEditingController(text: entry?.comment ?? '');
+    _commentController = TextEditingController(
+      text: _draft.entry.comment ?? '',
+    );
     _startTimeController = TextEditingController(
-      text: entry != null ? _formatTimeInput(entry.startAt) : '',
+      text: _formatTimeInput(_draft.startAt),
     );
     _endTimeController = TextEditingController(
-      text: entry?.endAt != null ? _formatTimeInput(entry!.endAt!) : '',
+      text: _draft.endAt != null ? _formatTimeInput(_draft.endAt!) : '',
     );
-    _selectedProjectId = entry?.projectId;
-    _selectedTaskId = entry?.taskId;
   }
 
   @override
@@ -71,50 +87,42 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
     if (!widget.isOpen && oldWidget.isOpen) {
       _isConfirmingDelete = false;
     }
-    if (widget.resolvedEntry != oldWidget.resolvedEntry) {
+    if (widget.resolvedEntry != oldWidget.resolvedEntry ||
+        widget.isOpen != oldWidget.isOpen) {
+      _initDraft();
       _initControllers();
     }
   }
 
-  @override
-  void dispose() {
-    _commentController.dispose();
-    _startTimeController.dispose();
-    _endTimeController.dispose();
-    _projectFieldController.dispose();
-    _taskFieldController.dispose();
-    _commentFieldController.dispose();
-    _startTimeFieldController.dispose();
-    _endTimeFieldController.dispose();
-    super.dispose();
-  }
-
-  bool get _isNew => widget.isNew;
+  bool get _isNew => widget.resolvedEntry == null;
 
   void _handleSave() async {
-    if (widget.resolvedEntry == null) return;
-
     final bloc = context.read<TimeTrackerBloc>();
-    final entry = widget.resolvedEntry!.entry;
 
-    final startAt = _parseTimeInput(_startTimeController.text, entry.startAt);
+    final startAt = _parseTimeInput(_startTimeController.text, _draft.startAt);
     final endAt = _endTimeController.text.isNotEmpty
-        ? _parseTimeInput(_endTimeController.text, entry.endAt ?? entry.startAt)
+        ? _parseTimeInput(_endTimeController.text, _draft.endAt ?? startAt)
         : null;
 
-    final updatedEntry = entry.copyWith(
-      id: entry.id,
-      projectId: _selectedProjectId,
-      taskId: _selectedTaskId,
-      comment: _commentController.text,
-      startAt: startAt,
-      endAt: endAt,
-      status: entry.status,
-    );
-
-    if (widget.isNew) {
-      bloc.add(TimeTrackerEntryCreated(updatedEntry));
+    if (_isNew) {
+      final newEntry = TimeEntry(
+        id: '',
+        projectId: _draft.projectId,
+        taskId: _draft.taskId,
+        comment: _commentController.text,
+        startAt: startAt,
+        endAt: endAt,
+        status: TimeEntryStatus.stopped,
+      );
+      bloc.add(TimeTrackerEntryCreated(newEntry));
     } else {
+      final updatedEntry = _draft.entry.copyWith(
+        projectId: _draft.projectId,
+        taskId: _draft.taskId,
+        comment: _commentController.text,
+        startAt: startAt,
+        endAt: endAt,
+      );
       bloc.add(TimeTrackerEntryUpdated(updatedEntry));
     }
 
@@ -149,7 +157,6 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
   Widget build(BuildContext context) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
-    final projectTaskState = context.watch<ProjectTaskState>();
 
     return ResizableDrawer(
       isOpen: widget.isOpen,
@@ -165,7 +172,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                 });
               },
       ),
-      body: widget.resolvedEntry == null
+      body: _draft == null
           ? const SizedBox.shrink()
           : Column(
               children: [
@@ -254,7 +261,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                         Consumer<ProjectTaskState>(
                           builder: (context, state, child) {
                             final selectedProject = state.projects
-                                .where((p) => p.id == _selectedProjectId)
+                                .where((p) => p.id == _draft.projectId)
                                 .firstOrNull;
 
                             return InlineField(
@@ -272,13 +279,22 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                     _projectFieldController.handleEditorClose();
                                   }
                                 },
-                                value: _selectedProjectId,
+                                value: _draft.projectId,
                                 placeholder: 'Select Project',
                                 onChanged: (value) {
                                   setState(() {
-                                    _selectedProjectId = value;
-                                    _selectedTaskId = null;
+                                    _draft = _draft.copyWith(
+                                      entry: _draft.entry.copyWith(
+                                        projectId: value,
+                                        taskId: null,
+                                      ),
+                                      project: context
+                                          .read<EntityResolver>()
+                                          .getResolvedProject(value!)!
+                                          .project,
+                                    );
                                   });
+
                                   _projectFieldController.handleEditorCommit();
                                 },
                                 actionBuilder: (context, query, close) {
@@ -303,8 +319,14 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                             '',
                                           );
                                       setState(() {
-                                        _selectedProjectId = newProject.id;
-                                        _selectedTaskId = null;
+                                        _draft = _draft.copyWith(
+                                          entry: _draft.entry.copyWith(
+                                            projectId: newProject.id,
+                                            taskId: null,
+                                          ),
+                                          project: newProject,
+                                          task: null,
+                                        );
                                       });
                                       _projectFieldController
                                           .handleEditorCommit();
@@ -327,7 +349,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                         Consumer<ProjectTaskState>(
                           builder: (context, state, child) {
                             final selectedTask = state.tasks
-                                .where((t) => t.id == _selectedTaskId)
+                                .where((t) => t.id == _draft.taskId)
                                 .firstOrNull;
 
                             return InlineField(
@@ -345,11 +367,19 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                     _taskFieldController.handleEditorClose();
                                   }
                                 },
-                                value: _selectedTaskId,
+                                value: _draft.taskId,
                                 placeholder: 'Select Task',
                                 onChanged: (value) {
                                   setState(() {
-                                    _selectedTaskId = value;
+                                    _draft = _draft.copyWith(
+                                      entry: _draft.entry.copyWith(
+                                        taskId: value,
+                                      ),
+                                      task: context
+                                          .read<EntityResolver>()
+                                          .getResolvedTask(value!)!
+                                          .task,
+                                    );
                                   });
                                   _taskFieldController.handleEditorCommit();
                                 },
@@ -358,7 +388,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                     (t) =>
                                         t.title.toLowerCase() ==
                                             query.toLowerCase() &&
-                                        t.projectId == _selectedProjectId,
+                                        t.projectId == _draft.projectId,
                                   );
                                   if (exactMatchExists && query.isNotEmpty)
                                     return const SizedBox.shrink();
@@ -368,14 +398,21 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                         ? 'Create new task'
                                         : 'Create task "$query"',
                                     onTap: () async {
-                                      if (_selectedProjectId == null) return;
+                                      if (_draft.projectId == null) return;
                                       final newTask = await state.createTask(
-                                        _selectedProjectId!,
+                                        _draft.projectId!,
                                         query.isEmpty ? 'New task' : query,
                                         '',
                                       );
                                       setState(() {
-                                        _selectedTaskId = newTask.id;
+                                        setState(() {
+                                          _draft = _draft.copyWith(
+                                            entry: _draft.entry.copyWith(
+                                              taskId: newTask.id,
+                                            ),
+                                            task: newTask,
+                                          );
+                                        });
                                       });
                                       _taskFieldController.handleEditorCommit();
                                       close();
@@ -384,7 +421,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                 },
                                 options: state.tasks
                                     .where(
-                                      (t) => t.projectId == _selectedProjectId,
+                                      (t) => t.projectId == _draft.projectId,
                                     )
                                     .map((t) {
                                       return SelectOption(
@@ -471,9 +508,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                       SizedBox(height: theme.spacings.s8),
                                       Text(
                                         _formatDuration(
-                                          widget.resolvedEntry!.duration(
-                                            DateTime.now(),
-                                          ),
+                                          _draft.duration(DateTime.now()),
                                         ),
                                         style: theme.commonTextStyles.h2,
                                       ),

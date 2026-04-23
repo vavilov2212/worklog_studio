@@ -1,12 +1,12 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide DrawerControllerState;
 import 'package:provider/provider.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/domain/resolved_project.dart';
-import 'package:worklog_studio/state/project_task_state.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
 import 'components/project_card.dart';
 import 'components/project_drawer.dart';
+import 'package:worklog_studio/feature/common/presentation/drawer_controller_state.dart';
 
 class ProjectsScreen extends StatefulWidget {
   const ProjectsScreen({super.key});
@@ -16,33 +16,28 @@ class ProjectsScreen extends StatefulWidget {
 }
 
 class _ProjectsScreenState extends State<ProjectsScreen> {
-  Project? selectedProject;
+  DrawerControllerState<Project> _drawerState = DrawerControllerState.closed();
 
   void _handleProjectSelected(Project project) {
     setState(() {
-      if (selectedProject?.id == project.id) {
-        selectedProject = null; // Toggle off if clicking the same project
+      if (_drawerState.state == DrawerState.edit &&
+          _drawerState.entity?.id == project.id) {
+        _drawerState = DrawerControllerState.closed();
       } else {
-        selectedProject = project;
+        _drawerState = DrawerControllerState.edit(project);
       }
     });
   }
 
   void _handleCreateProject() {
     setState(() {
-      selectedProject = Project(
-        id: '',
-        name: '',
-        description: '',
-        createdAt: DateTime.now(),
-        status: ProjectStatus.open,
-      );
+      _drawerState = DrawerControllerState.create();
     });
   }
 
   void _closePanel() {
     setState(() {
-      selectedProject = null;
+      _drawerState = DrawerControllerState.closed();
     });
   }
 
@@ -57,16 +52,15 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         Expanded(
           child: ProjectList(
             projects: resolvedProjects,
-            selectedProject: selectedProject,
+            selectedProject: _drawerState.entity,
             onProjectSelected: _handleProjectSelected,
             onCreateProject: _handleCreateProject,
           ),
         ),
         ProjectDrawer(
-          project: selectedProject,
-          isOpen: selectedProject != null,
+          project: _drawerState.entity,
+          isOpen: _drawerState.isOpen,
           onClose: _closePanel,
-          isNew: selectedProject != null && selectedProject!.id.isEmpty,
         ),
       ],
     );
