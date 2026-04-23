@@ -33,6 +33,21 @@ class $AssetsVectorsGen {
   /// File path: assets/vectors/flashlight-off-24.vec
   String get flashlightOff24 => 'packages/worklog_studio_style_system/assets/vectors/flashlight-off-24.vec';
 
+  /// File path: assets/vectors/history-24.svg
+  String get history24 => 'packages/worklog_studio_style_system/assets/vectors/history-24.svg';
+
+  /// File path: assets/vectors/history-24.svg.vec
+  String get history24Svg => 'packages/worklog_studio_style_system/assets/vectors/history-24.svg.vec';
+
+  /// File path: assets/vectors/play-filled-24.svg
+  String get playFilled24 => 'packages/worklog_studio_style_system/assets/vectors/play-filled-24.svg';
+
+  /// File path: assets/vectors/play-filled-24.svg.vec
+  String get playFilled24Svg => 'packages/worklog_studio_style_system/assets/vectors/play-filled-24.svg.vec';
+
+  /// File path: assets/vectors/play-filled-64.svg.vec
+  String get playFilled64Svg => 'packages/worklog_studio_style_system/assets/vectors/play-filled-64.svg.vec';
+
   /// File path: assets/vectors/player-pause-24.svg.vec
   String get playerPause24Svg => 'packages/worklog_studio_style_system/assets/vectors/player-pause-24.svg.vec';
 
@@ -42,21 +57,54 @@ class $AssetsVectorsGen {
   /// File path: assets/vectors/plus-24.svg.vec
   String get plus24Svg => 'packages/worklog_studio_style_system/assets/vectors/plus-24.svg.vec';
 
+  /// File path: assets/vectors/plus-outlined-24.svg
+  String get plusOutlined24 => 'packages/worklog_studio_style_system/assets/vectors/plus-outlined-24.svg';
+
+  /// File path: assets/vectors/plus-outlined-24.svg.vec
+  String get plusOutlined24Svg => 'packages/worklog_studio_style_system/assets/vectors/plus-outlined-24.svg.vec';
+
   /// File path: assets/vectors/rotate-clockwise-24.svg.vec
   String get rotateClockwise24Svg => 'packages/worklog_studio_style_system/assets/vectors/rotate-clockwise-24.svg.vec';
 
-  /// File path: assets/vectors/square-24.svg.vec
-  String get square24Svg => 'packages/worklog_studio_style_system/assets/vectors/square-24.svg.vec';
+  /// File path: assets/vectors/settings-24.svg
+  String get settings24 => 'packages/worklog_studio_style_system/assets/vectors/settings-24.svg';
+
+  /// File path: assets/vectors/settings-24.svg.vec
+  String get settings24Svg => 'packages/worklog_studio_style_system/assets/vectors/settings-24.svg.vec';
+
+  /// File path: assets/vectors/square-filled-24.svg
+  String get squareFilled24 => 'packages/worklog_studio_style_system/assets/vectors/square-filled-24.svg';
+
+  /// File path: assets/vectors/square-filled-24.svg.vec
+  String get squareFilled24Svg => 'packages/worklog_studio_style_system/assets/vectors/square-filled-24.svg.vec';
+
+  /// File path: assets/vectors/square-filled-64.svg.vec
+  String get squareFilled64Svg => 'packages/worklog_studio_style_system/assets/vectors/square-filled-64.svg.vec';
+
+  /// File path: assets/vectors/square-outlined-24.svg.vec
+  String get squareOutlined24Svg => 'packages/worklog_studio_style_system/assets/vectors/square-outlined-24.svg.vec';
 
   /// List of all assets
   List<String> get values => [
     flashlight24,
     flashlightOff24,
+    history24,
+    history24Svg,
+    playFilled24,
+    playFilled24Svg,
+    playFilled64Svg,
     playerPause24Svg,
     playerPlay24Svg,
     plus24Svg,
+    plusOutlined24,
+    plusOutlined24Svg,
     rotateClockwise24Svg,
-    square24Svg,
+    settings24,
+    settings24Svg,
+    squareFilled24,
+    squareFilled24Svg,
+    squareFilled64Svg,
+    squareOutlined24Svg,
   ];
 }
 

@@ -128,7 +128,7 @@ class _MiniPanelState extends State<MiniPanel> {
                 PrimaryButton(
                   type: ButtonType.danger,
                   size: ButtonSize.sm,
-                  leftIconWidget: const Icon(Icons.stop_sharp),
+                  leftIcon: WorklogStudioAssets.vectors.squareFilled64Svg,
                   onTap: () {
                     context.read<MiniTrackerCubit>().stopTimer();
                   },
@@ -208,25 +208,20 @@ class _MiniPanelState extends State<MiniPanel> {
           ),
           SizedBox(width: theme.spacings.s8),
           if (isActive)
-            PrimaryButton(
-              type: ButtonType.ghost,
-              size: ButtonSize.sm,
-              leftIconWidget: Icon(
-                Icons.stop,
-                // color: theme.colorsPalette.semantic.negative,
-              ),
-              onTap: () {
-                context.read<MiniTrackerCubit>().stopTimer();
-              },
-            )
+            SizedBox.shrink()
+          // PrimaryButton(
+          //   type: ButtonType.ghost,
+          //   size: ButtonSize.sm,
+          //   leftIcon: WorklogStudioAssets.vectors.squareFilled64Svg,
+          //   onTap: () {
+          //     context.read<MiniTrackerCubit>().stopTimer();
+          //   },
+          // )
           else
             PrimaryButton(
               type: ButtonType.ghost,
               size: ButtonSize.sm,
-              leftIconWidget: Icon(
-                Icons.play_arrow,
-                color: theme.colorsPalette.text.primary,
-              ),
+              leftIcon: WorklogStudioAssets.vectors.playFilled64Svg,
               onTap: () {
                 context.read<MiniTrackerCubit>().startTimer(
                   projectId: project?.id,
@@ -336,6 +331,24 @@ class _MiniPanelState extends State<MiniPanel> {
               'SEARCH RESULTS',
               style: theme.commonTextStyles.caption2Bold.copyWith(
                 color: theme.colorsPalette.text.secondary2,
+              ),
+            ),
+            const Spacer(),
+            InkWell(
+              onTap: () {
+                DesktopService().openTasksFromTray();
+              },
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: theme.spacings.s4,
+                  vertical: theme.spacings.s2,
+                ),
+                child: Text(
+                  'View All',
+                  style: theme.commonTextStyles.caption2.copyWith(
+                    color: theme.colorsPalette.accent.primary,
+                  ),
+                ),
               ),
             ),
           ],

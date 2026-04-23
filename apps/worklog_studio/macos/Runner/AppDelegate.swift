@@ -144,13 +144,55 @@ class AppDelegate: FlutterAppDelegate {
         case "checkForUpdates":
             self.updaterController?.checkForUpdates(nil)
             result(nil)
+        case "focusMainWindow":
+            self.focusMainWindow()
+            result(nil)
+        //
+        // Запись в tray слишком широкая
+        //
+        // case "updateTray":
+        //     if let args = call.arguments as? [String: Any] {
+        //         if let title = args["title"] as? String {
+        //             self.statusItem.button?.title = title
+        //         }
+        //         if let iconName = args["icon"] as? String {
+        //             // Теперь мы просто берем иконку из XCAssets
+        //             // Если iconName == "AppIconRunning", система возьмет ваш красный элемент
+        //             // Если iconName == "AppIcon" (или что-то для Tray), возьмет MenuIcons
+        //             let targetIconName = (iconName == "AppIconRunning") ? "AppIconRunning" : "MenuIcons"
+                    
+        //             if let image = NSImage(named: targetIconName) {
+        //                 // Для tray-иконок включаем template, если это монохром
+        //                 // Если в "AppIconRunning" у вас красный цвет, isTemplate не ставим
+        //                 image.isTemplate = (targetIconName == "MenuIcons")
+        //                 self.statusItem.button?.image = image
+        //             }
+        //             self.statusItem.button?.image?.size = NSSize(width: 18, height: 18)
+        //         }
+        //     }
+        //     result(nil)
+
         case "updateTray":
             if let args = call.arguments as? [String: Any] {
                 if let title = args["title"] as? String {
                     self.statusItem.button?.title = title
                 }
                 if let iconName = args["icon"] as? String {
-                    self.statusItem.button?.image = NSImage(named: iconName)
+                    if iconName == "AppIconRunning" {
+                        if let imagePath = Bundle.main.path(forResource: "app_icon_running", ofType: "png", inDirectory: "flutter_assets/assets") {
+                            self.statusItem.button?.image = NSImage(contentsOfFile: imagePath)
+                        } else {
+                            if #available(macOS 11.0, *) {
+                                let img = NSImage(systemSymbolName: "record.circle.fill", accessibilityDescription: "Recording")
+                                // Do NOT set isTemplate to true, otherwise it loses its color (red)
+                                self.statusItem.button?.image = img
+                            } else {
+                                self.statusItem.button?.image = NSImage(named: "AppIcon")
+                            }
+                        }
+                    } else {
+                        self.statusItem.button?.image = NSImage(named: iconName)
+                    }
                     self.statusItem.button?.image?.size = NSSize(width: 18, height: 18)
                 }
             }
@@ -181,7 +223,21 @@ class AppDelegate: FlutterAppDelegate {
         panel.setFrame(frame, display: true, animate: true)
     }
 
+    func focusMainWindow() {
+        if let window = NSApplication.shared.windows.first(where: { $0 is MainFlutterWindow }) {
+            window.makeKeyAndOrderFront(nil)
+            NSApplication.shared.activate(ignoringOtherApps: true)
+        }
+    }
+
     override func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         return false
+    }
+
+    override func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !flag {
+            focusMainWindow()
+        }
+        return true
     }
 }
