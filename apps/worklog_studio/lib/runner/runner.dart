@@ -18,9 +18,7 @@ import 'package:worklog_studio/feature/app/layout/app_bar/app_bar_service.dart';
 import 'package:worklog_studio/firebase_options.dart';
 import 'package:worklog_studio_style_system/ui_kit/ui_kit.dart';
 
-import 'dart:convert';
-
-import 'package:worklog_studio/feature/app/app.dart';
+import 'package:worklog_studio/data/sqlite/database_provider.dart';
 
 Future<void> run(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -47,8 +45,20 @@ Future<void> run(List<String> args) async {
   if (kIsWeb) {
     usePathUrlStrategy();
   }
-  _initDependencies();
+  await _initDependencies();
   _initRepositories();
+
+  try {
+    if (!kIsWeb) {
+      await getIt<
+        UserRepository
+      >(); // Forces initial cascade if necessary, but importantly...
+      // We explicitly bootstrap the database here manually to ensure it's ready before UI
+      await DatabaseProvider.getDatabase();
+    }
+  } catch (e, st) {
+    l.e('Failed to bootstrap DB on startup', st);
+  }
 
   String? initialRoute;
   bool isPopover = false;
@@ -85,7 +95,7 @@ Future<void> run(List<String> args) async {
   }
 }
 
-void _initDependencies() async {
+Future<void> _initDependencies() async {
   _initDotEnv();
   await configureDependencies();
 }
