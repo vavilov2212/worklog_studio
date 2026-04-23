@@ -48,6 +48,57 @@
 
 ---
 
+## 📦 Dependency Management (Melos)
+
+This project uses a Dart workspace with Melos. Dependencies must be added consistently across packages — do not edit each `pubspec.yaml` manually.
+
+### Add a dependency to all packages
+
+```bash
+melos exec -- flutter pub add intl:^0.20.2
+```
+
+This runs `flutter pub add` in every package in the workspace.
+
+More about Melos: https://melos.invertase.dev/
+
+---
+
+### Add a dependency to a specific package
+
+```bash
+melos exec --scope="worklog_studio" -- flutter pub add http
+```
+
+or manually:
+
+```bash
+cd apps/worklog_studio
+flutter pub add http
+```
+
+---
+
+### Update dependencies
+
+```bash
+melos exec -- flutter pub upgrade
+```
+
+See Dart workspaces: https://dart.dev/tools/pub/workspaces
+
+---
+
+### Important notes
+
+- Keep shared dependencies (e.g. `intl`, `http`, `collection`) on the same version across all packages
+- Do not add dependencies to the root `pubspec.yaml` — it is not used for resolution
+- Use Melos to avoid version conflicts
+
+Flutter packages guide: https://docs.flutter.dev/packages-and-plugins/using-packages
+
+---
+
 ## 📄 License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 

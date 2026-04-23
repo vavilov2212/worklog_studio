@@ -8,6 +8,7 @@ import 'package:worklog_studio/feature/common/presentation/resizable_drawer.dart
 import 'package:worklog_studio/feature/common/presentation/components/inline_field.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
+import 'package:worklog_studio/feature/common/presentation/components/entity_meta_info_row.dart';
 
 class TaskDrawer extends StatefulWidget {
   final Task? task;
@@ -192,22 +193,15 @@ class _TaskDrawerState extends State<TaskDrawer> {
                       children: [
                         if (!_isNew) ...[
                           // Status Badge
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: theme.spacings.s12,
-                              vertical: theme.spacings.s4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: palette.accent.primaryMuted,
-                              borderRadius: theme.radiuses.pill.circular,
-                            ),
-                            child: Text(
-                              _getStatusText(widget.task!.status),
-                              style: theme.commonTextStyles.caption3Bold
-                                  .copyWith(color: palette.accent.primary),
-                            ),
+                          EntityMetaInfoRow(
+                            status: widget.task!.status == TaskStatus.done
+                                ? BadgeStatus.done
+                                : widget.task!.status == TaskStatus.archived
+                                ? BadgeStatus.ready
+                                : BadgeStatus.inProgress,
+                            statusLabel: _getStatusText(widget.task!.status),
+                            createdAt: widget.task!.createdAt,
                           ),
-                          SizedBox(height: theme.spacings.s16),
                         ],
 
                         // Title Input

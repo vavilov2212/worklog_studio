@@ -8,6 +8,7 @@ import 'package:worklog_studio/feature/common/presentation/components/inline_fie
 import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
+import 'package:worklog_studio/feature/common/presentation/components/entity_meta_info_row.dart';
 import 'package:worklog_studio/domain/resolved_time_entry.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
 
@@ -238,26 +239,15 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (!_isNew) ...[
-                          Row(
-                            children: [
-                              StatusBadge(
-                                status: widget.resolvedEntry!.isRunning
-                                    ? BadgeStatus.inProgress
-                                    : BadgeStatus.ready,
-                                label: getStatusText(
-                                  widget.resolvedEntry!.entry.status,
-                                ),
-                              ),
-                              SizedBox(width: theme.spacings.s12),
-                              Text(
-                                'Created ${_formatTime(widget.resolvedEntry!.entry.startAt)}',
-                                style: theme.commonTextStyles.body2.copyWith(
-                                  color: palette.text.secondary,
-                                ),
-                              ),
-                            ],
+                          EntityMetaInfoRow(
+                            status: widget.resolvedEntry!.isRunning
+                                ? BadgeStatus.inProgress
+                                : BadgeStatus.ready,
+                            statusLabel: getStatusText(
+                              widget.resolvedEntry!.entry.status,
+                            ),
+                            createdAt: widget.resolvedEntry!.entry.startAt,
                           ),
-                          SizedBox(height: theme.spacings.s32),
                         ],
 
                         // Project Select
@@ -592,14 +582,5 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
     final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
     final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
     return '$hours:$minutes:$seconds';
-  }
-
-  String _formatTime(DateTime time) {
-    final hour = time.hour == 0
-        ? 12
-        : (time.hour > 12 ? time.hour - 12 : time.hour);
-    final minute = time.minute.toString().padLeft(2, '0');
-    final period = time.hour >= 12 ? 'PM' : 'AM';
-    return '${hour.toString().padLeft(2, '0')}:$minute $period';
   }
 }

@@ -8,6 +8,7 @@ import 'package:worklog_studio/feature/common/presentation/components/drawer_hea
 import 'package:worklog_studio/feature/common/presentation/components/inline_field.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
+import 'package:worklog_studio/feature/common/presentation/components/entity_meta_info_row.dart';
 
 class ProjectDrawer extends StatefulWidget {
   final Project? project;
@@ -194,22 +195,16 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (!_isNew) ...[
-                          Row(
-                            children: [
-                              StatusBadge(
-                                status: BadgeStatus.ready,
-                                label: getStatusText(widget.project!.status),
-                              ),
-                              SizedBox(width: theme.spacings.s12),
-                              Text(
-                                'Created ${_formatDate(widget.project!.createdAt)}',
-                                style: theme.commonTextStyles.body2.copyWith(
-                                  color: palette.text.secondary,
-                                ),
-                              ),
-                            ],
+                          EntityMetaInfoRow(
+                            status: widget.project!.status == ProjectStatus.done
+                                ? BadgeStatus.done
+                                : widget.project!.status ==
+                                      ProjectStatus.archived
+                                ? BadgeStatus.ready
+                                : BadgeStatus.inProgress,
+                            statusLabel: getStatusText(widget.project!.status),
+                            createdAt: widget.project!.createdAt,
                           ),
-                          SizedBox(height: theme.spacings.s24),
                         ],
                         // Name Input
                         InlineField(
@@ -435,24 +430,6 @@ class _ProjectDrawerState extends State<ProjectDrawer> {
       case ProjectStatus.archived:
         return 'ARCHIVED';
     }
-  }
-
-  String _formatDate(DateTime date) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 
   String _formatCurrency(double amount) {
