@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 class PrimaryInput extends StatefulWidget {
   final TextEditingController controller;
+  final FocusNode? focusNode;
   final String? label;
   final String hintText;
   final String? description;
@@ -30,6 +31,7 @@ class PrimaryInput extends StatefulWidget {
     required this.label,
     required this.hintText,
     required this.controller,
+    this.focusNode,
     this.description,
     this.prefixWidget,
     this.prefixIconPadding,
@@ -144,6 +146,7 @@ class _PrimaryInputState extends State<PrimaryInput> {
                     ),
                   Expanded(
                     child: TextField(
+                      focusNode: widget.focusNode,
                       autofocus: widget.autofocus,
                       controller: controller,
                       enabled:

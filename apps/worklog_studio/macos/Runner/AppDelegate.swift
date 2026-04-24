@@ -8,7 +8,6 @@ class AppDelegate: FlutterAppDelegate {
     private var popoverEngine: FlutterEngine?
     private var popoverPanel: PopoverPanel?
     private var statusItem: NSStatusItem!
-    private var isPopoverExpanded: Bool = false
 
     private var popupLastCloseTime: Date = Date.distantPast
     
@@ -36,7 +35,7 @@ class AppDelegate: FlutterAppDelegate {
             flutterViewController.backgroundColor = .clear // Убираем черный фон у Flutter
             
             popoverPanel = PopoverPanel(
-                contentRect: NSRect(x: 0, y: 0, width: 320, height: 400),
+                contentRect: NSRect(x: 0, y: 0, width: 320, height: 520),
                 flutterViewController: flutterViewController
             )
             
@@ -99,7 +98,7 @@ class AppDelegate: FlutterAppDelegate {
         guard let panel = popoverPanel else { return }
         
         let width: CGFloat = 320
-        let newHeight: CGFloat = self.isPopoverExpanded ? 600 : 400
+        let newHeight: CGFloat = 520
         
         let mouseLoc = NSEvent.mouseLocation
         let currentScreen = NSScreen.screens.first(where: { NSMouseInRect(mouseLoc, $0.frame, false) }) ?? NSScreen.main
@@ -136,46 +135,52 @@ class AppDelegate: FlutterAppDelegate {
         case "toggle":
             self.togglePopover(nil)
             result(nil)
-        case "resizePopover":
-            if let args = call.arguments as? [String: Any], let isExpanded = args["isExpanded"] as? Bool {
-                self.resizePopover(isExpanded: isExpanded)
-            }
-            result(nil)
         case "checkForUpdates":
             self.updaterController?.checkForUpdates(nil)
             result(nil)
         case "focusMainWindow":
             self.focusMainWindow()
             result(nil)
-        //
-        // Запись в tray слишком широкая
-        //
-        // case "updateTray":
-        //     if let args = call.arguments as? [String: Any] {
-        //         if let title = args["title"] as? String {
-        //             self.statusItem.button?.title = title
-        //         }
-        //         if let iconName = args["icon"] as? String {
-        //             // Теперь мы просто берем иконку из XCAssets
-        //             // Если iconName == "AppIconRunning", система возьмет ваш красный элемент
-        //             // Если iconName == "AppIcon" (или что-то для Tray), возьмет MenuIcons
-        //             let targetIconName = (iconName == "AppIconRunning") ? "AppIconRunning" : "MenuIcons"
-                    
-        //             if let image = NSImage(named: targetIconName) {
-        //                 // Для tray-иконок включаем template, если это монохром
-        //                 // Если в "AppIconRunning" у вас красный цвет, isTemplate не ставим
-        //                 image.isTemplate = (targetIconName == "MenuIcons")
-        //                 self.statusItem.button?.image = image
-        //             }
-        //             self.statusItem.button?.image?.size = NSSize(width: 18, height: 18)
-        //         }
-        //     }
-        //     result(nil)
-
         case "updateTray":
             if let args = call.arguments as? [String: Any] {
                 if let title = args["title"] as? String {
-                    self.statusItem.button?.title = title
+                    if title.isEmpty {
+                        self.statusItem.length = NSStatusItem.variableLength
+                        self.statusItem.button?.title = ""
+                    } else {
+                        let parts = title.components(separatedBy: " - ")
+                        var displayTitle: String
+                        if parts.count >= 2 {
+                            let projectName = parts[0].trimmingCharacters(in: .whitespaces)
+                            let taskName = parts.dropFirst().joined(separator: " - ").trimmingCharacters(in: .whitespaces)
+                            
+                            if !projectName.isEmpty && !taskName.isEmpty {
+                                displayTitle = " \(taskName) • \(projectName)"
+                            } else if !taskName.isEmpty {
+                                displayTitle = " \(taskName)"
+                            } else if !projectName.isEmpty {
+                                displayTitle = " \(projectName)"
+                            } else {
+                                displayTitle = " Session Active"
+                            }
+                        } else {
+                            let trimmed = title.trimmingCharacters(in: .whitespaces)
+                            displayTitle = trimmed.isEmpty ? " Session Active" : " \(trimmed)"
+                        }
+                        
+                        self.statusItem.button?.title = displayTitle
+                        self.statusItem.button?.lineBreakMode = .byTruncatingTail
+                        
+                        let font = self.statusItem.button?.font ?? NSFont.systemFont(ofSize: 13)
+                        let size = (displayTitle as NSString).size(withAttributes: [.font: font])
+                        let requiredWidth = size.width + 34 // 18 for icon + ~16 for padding/margins
+                        
+                        if requiredWidth > 160 {
+                            self.statusItem.length = 160
+                        } else {
+                            self.statusItem.length = NSStatusItem.variableLength
+                        }
+                    }
                 }
                 if let iconName = args["icon"] as? String {
                     if iconName == "AppIconRunning" {
@@ -200,27 +205,6 @@ class AppDelegate: FlutterAppDelegate {
         default:
             result(FlutterMethodNotImplemented)
         }
-    }
-
-    func resizePopover(isExpanded: Bool) {
-        guard let panel = popoverPanel else { return }
-        
-        self.isPopoverExpanded = isExpanded
-        
-        // Match logic from showPopover() where y = screen.visibleFrame.maxY - height - 8
-        let screen = NSScreen.main ?? NSScreen.screens.first!
-        let newHeight: CGFloat = isExpanded ? 600 : 400
-        
-        var frame = panel.frame
-        // We want to keep the top edge of the popover fixed relative to the screen,
-        // or ensure it doesn't go off-screen. If it's anchored to the tray,
-        // we likely want to grow downwards, so top remains the same.
-        
-        // Let's recalculate based on the tray anchor
-        frame.origin.y = screen.visibleFrame.maxY - newHeight - 8
-        frame.size.height = newHeight
-        
-        panel.setFrame(frame, display: true, animate: true)
     }
 
     func focusMainWindow() {

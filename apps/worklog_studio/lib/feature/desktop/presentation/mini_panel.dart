@@ -22,26 +22,25 @@ class MiniPanel extends StatefulWidget {
 class _MiniPanelState extends State<MiniPanel> {
   static const _platform = MethodChannel('worklog_studio/ipc');
   bool _isVisible = false;
-  bool _isExpanded = false;
   String _query = '';
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
+    _searchFocusNode.addListener(() {
+      setState(() {});
+    });
     Future.delayed(const Duration(milliseconds: 50), () {
       if (mounted) setState(() => _isVisible = true);
     });
   }
 
-  void _toggleExpansion() {
-    setState(() => _isExpanded = !_isExpanded);
-    _platform.invokeMethod('resizePopover', {'isExpanded': _isExpanded});
-  }
-
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -86,6 +85,7 @@ class _MiniPanelState extends State<MiniPanel> {
       decoration: BoxDecoration(
         color: theme.colorsPalette.background.surface,
         borderRadius: theme.radiuses.md.circular,
+        boxShadow: [theme.shadows.sm],
       ),
       child: Padding(
         padding: EdgeInsets.all(theme.spacings.s12),
@@ -98,7 +98,7 @@ class _MiniPanelState extends State<MiniPanel> {
                 color: theme.colorsPalette.accent.primary,
               ),
             ),
-            SizedBox(height: theme.spacings.s4),
+            SizedBox(height: theme.spacings.s8),
             Text(
               taskName,
               style: theme.commonTextStyles.title,
@@ -106,7 +106,7 @@ class _MiniPanelState extends State<MiniPanel> {
               overflow: TextOverflow.ellipsis,
             ),
             if (projectName != null) ...[
-              SizedBox(height: theme.spacings.s0),
+              SizedBox(height: theme.spacings.s2),
               Text(
                 projectName,
                 style: theme.commonTextStyles.caption.copyWith(
@@ -116,19 +116,24 @@ class _MiniPanelState extends State<MiniPanel> {
                 overflow: TextOverflow.ellipsis,
               ),
             ],
-            SizedBox(height: theme.spacings.s4),
+            SizedBox(height: theme.spacings.s12),
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 _MiniActiveTimerTextWrapper(
                   entry: activeEntry,
-                  style: theme.commonTextStyles.title,
+                  style: theme.commonTextStyles.h2.copyWith(
+                    color: theme.colorsPalette.text.primary,
+                    fontWeight: FontWeight
+                        .w500, // reduce visual weight slightly from default
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
                 ),
                 const Spacer(),
                 PrimaryButton(
                   type: ButtonType.danger,
                   size: ButtonSize.sm,
-                  leftIcon: WorklogStudioAssets.vectors.squareFilled64Svg,
+                  leftIconWidget: const Icon(Icons.stop_sharp),
                   onTap: () {
                     context.read<MiniTrackerCubit>().stopTimer();
                   },
@@ -141,33 +146,7 @@ class _MiniPanelState extends State<MiniPanel> {
     );
   }
 
-  Widget _buildActionGrid(AppThemeExtension theme) {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.note_add, size: 16),
-              SizedBox(height: theme.spacings.s4),
-              Text('Add Note', style: theme.commonTextStyles.body),
-            ],
-          ),
-        ),
-        SizedBox(width: theme.spacings.s12),
-        Expanded(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.edit, size: 16),
-              SizedBox(height: theme.spacings.s4),
-              Text('Log Manual', style: theme.commonTextStyles.body),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
+  // ActionGrid removed
 
   Widget _buildTaskItem(
     Task task,
@@ -208,15 +187,14 @@ class _MiniPanelState extends State<MiniPanel> {
           ),
           SizedBox(width: theme.spacings.s8),
           if (isActive)
-            SizedBox.shrink()
-          // PrimaryButton(
-          //   type: ButtonType.ghost,
-          //   size: ButtonSize.sm,
-          //   leftIcon: WorklogStudioAssets.vectors.squareFilled64Svg,
-          //   onTap: () {
-          //     context.read<MiniTrackerCubit>().stopTimer();
-          //   },
-          // )
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: theme.spacings.s8),
+              child: Icon(
+                Icons.radio_button_checked,
+                size: 16,
+                color: theme.colorsPalette.accent.primary,
+              ),
+            )
           else
             PrimaryButton(
               type: ButtonType.ghost,
@@ -227,6 +205,138 @@ class _MiniPanelState extends State<MiniPanel> {
                   projectId: project?.id,
                   taskId: task.id,
                 );
+                _searchController.clear();
+                _searchFocusNode.unfocus();
+                setState(() {
+                  _query = '';
+                });
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProjectItem(
+    Project project,
+    AppThemeExtension theme,
+    BuildContext context,
+  ) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: theme.spacings.s4),
+      child: Row(
+        children: [
+          Icon(
+            Icons.folder,
+            size: 16,
+            color: theme.colorsPalette.accent.primary,
+          ),
+          SizedBox(width: theme.spacings.s8),
+          Expanded(
+            child: Text(
+              project.name,
+              style: theme.commonTextStyles.body,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          SizedBox(width: theme.spacings.s8),
+          PrimaryButton(
+            type: ButtonType.ghost,
+            size: ButtonSize.sm,
+            leftIconWidget: const Icon(Icons.arrow_forward, size: 14),
+            onTap: () {
+              DesktopService().openMainWindowFromTray(route: "projects");
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEntryItem(
+    TimeEntry entry,
+    MiniTrackerState state,
+    AppThemeExtension theme,
+    BuildContext context, {
+    int? count,
+  }) {
+    final task = entry.taskId != null
+        ? state.tasks.firstWhereOrNull((t) => t.id == entry.taskId)
+        : null;
+    final project = entry.projectId != null
+        ? state.projects.firstWhereOrNull((p) => p.id == entry.projectId)
+        : null;
+    final title = task?.title ?? entry.comment ?? 'No title';
+    final isActive = state.isRunning && state.activeEntry?.id == entry.id;
+
+    final hasCount = count != null && count > 1;
+    final subtitleText = hasCount
+        ? (project != null
+              ? '${project.name} • $count entries'
+              : '$count entries')
+        : (project?.name);
+
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: theme.spacings.s4),
+      child: Row(
+        children: [
+          Icon(
+            Icons.access_time,
+            size: 16,
+            color: theme.colorsPalette.accent.primary,
+          ),
+          SizedBox(width: theme.spacings.s8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: theme.commonTextStyles.body,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (subtitleText != null) ...[
+                  SizedBox(height: theme.spacings.s0),
+                  Text(
+                    subtitleText,
+                    style: theme.commonTextStyles.caption.copyWith(
+                      color: theme.colorsPalette.text.secondary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
+            ),
+          ),
+          SizedBox(width: theme.spacings.s8),
+          if (isActive)
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: theme.spacings.s8),
+              child: Icon(
+                Icons.radio_button_checked,
+                size: 16,
+                color: theme.colorsPalette.accent.primary,
+              ),
+            )
+          else
+            PrimaryButton(
+              type: ButtonType.ghost,
+              size: ButtonSize.sm,
+              leftIcon: WorklogStudioAssets.vectors.playFilled64Svg,
+              onTap: () {
+                context.read<MiniTrackerCubit>().startTimer(
+                  projectId: project?.id,
+                  taskId: task?.id,
+                  comment: entry.comment,
+                );
+                _searchController.clear();
+                _searchFocusNode.unfocus();
+                setState(() {
+                  _query = '';
+                });
               },
             ),
         ],
@@ -235,23 +345,24 @@ class _MiniPanelState extends State<MiniPanel> {
   }
 
   Widget _buildRecentActivity(MiniTrackerState state, AppThemeExtension theme) {
-    // Get unique recent tasks based on all entries (newest entries first usually)
-    final recentTaskIds = state.allEntries
-        .where((e) => e.taskId != null)
-        .map((e) => e.taskId!)
-        .toSet()
-        .toList();
+    final recentEntries = state.allEntries.where((e) => !e.isRunning).toList()
+      ..sort((a, b) => b.startAt.compareTo(a.startAt));
 
-    var recentTasks = recentTaskIds
-        .take(5)
-        .map((id) => state.tasks.firstWhereOrNull((t) => t.id == id))
-        .whereType<Task>()
-        .toList();
-
-    // Fallback if no logged entries
-    if (recentTasks.isEmpty) {
-      recentTasks = state.tasks.take(5).toList();
+    final Map<String, List<TimeEntry>> groupedEntries = {};
+    if (state.isRunning && state.activeEntry != null) {
+      final key = state.activeEntry!.taskId ?? state.activeEntry!.id;
+      groupedEntries[key] = [state.activeEntry!];
     }
+    for (final e in recentEntries) {
+      final key = e.taskId ?? e.id;
+      if (!groupedEntries.containsKey(key)) {
+        groupedEntries[key] = [e];
+      } else {
+        groupedEntries[key]!.add(e);
+      }
+    }
+
+    final recentGroups = groupedEntries.values.take(3).toList();
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -269,7 +380,7 @@ class _MiniPanelState extends State<MiniPanel> {
             const Spacer(),
             InkWell(
               onTap: () {
-                DesktopService().openHistoryFromTray();
+                DesktopService().openMainWindowFromTray(route: "history");
               },
               child: Padding(
                 padding: EdgeInsets.symmetric(
@@ -287,96 +398,161 @@ class _MiniPanelState extends State<MiniPanel> {
           ],
         ),
         SizedBox(height: theme.spacings.s4),
-        if (recentTasks.isEmpty)
-          Padding(
-            padding: EdgeInsets.symmetric(vertical: theme.spacings.s8),
-            child: Text(
-              'No recent tasks.',
-              style: theme.commonTextStyles.body.copyWith(
-                color: theme.colorsPalette.text.muted,
-              ),
-            ),
-          )
-        else
-          Column(
-            children: recentTasks.map((task) {
-              final project = task.projectId != null
-                  ? state.projects.firstWhereOrNull(
-                      (p) => p.id == task.projectId,
-                    )
-                  : null;
-              final isActive =
-                  state.isRunning && state.activeEntry?.taskId == task.id;
-              return _buildTaskItem(task, project, theme, context, isActive);
-            }).toList(),
+        Container(
+          decoration: BoxDecoration(
+            color: theme.colorsPalette.background.surface,
+            borderRadius: theme.radiuses.md.circular,
+            boxShadow: [theme.shadows.sm],
           ),
+          child: Padding(
+            padding: EdgeInsets.all(theme.spacings.s8),
+            child: recentGroups.isEmpty
+                ? Padding(
+                    padding: EdgeInsets.symmetric(vertical: theme.spacings.s8),
+                    child: Text(
+                      'No recent activity.',
+                      style: theme.commonTextStyles.body.copyWith(
+                        color: theme.colorsPalette.text.muted,
+                      ),
+                    ),
+                  )
+                : Column(
+                    children: recentGroups.map((group) {
+                      return _buildEntryItem(
+                        group.first,
+                        state,
+                        theme,
+                        context,
+                        count: group.length,
+                      );
+                    }).toList(),
+                  ),
+          ),
+        ),
       ],
     );
   }
 
   Widget _buildSearchResults(MiniTrackerState state, AppThemeExtension theme) {
     final queryLower = _query.toLowerCase();
+
     final filteredTasks = state.tasks
         .where((t) => t.title.toLowerCase().contains(queryLower))
+        .toList();
+
+    final filteredProjects = state.projects
+        .where((p) => p.name.toLowerCase().contains(queryLower))
+        .toList();
+
+    final filteredEntries = state.allEntries
+        .where((e) => e.comment?.toLowerCase().contains(queryLower) ?? false)
         .toList();
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Text(
-              'SEARCH RESULTS',
-              style: theme.commonTextStyles.caption2Bold.copyWith(
-                color: theme.colorsPalette.text.secondary2,
-              ),
-            ),
-            const Spacer(),
-            InkWell(
-              onTap: () {
-                DesktopService().openTasksFromTray();
-              },
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: theme.spacings.s4,
-                  vertical: theme.spacings.s2,
-                ),
-                child: Text(
-                  'View All',
-                  style: theme.commonTextStyles.caption2.copyWith(
-                    color: theme.colorsPalette.accent.primary,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: theme.spacings.s4),
-        if (filteredTasks.isEmpty)
+        if (filteredTasks.isEmpty &&
+            filteredProjects.isEmpty &&
+            filteredEntries.isEmpty)
           Padding(
             padding: EdgeInsets.symmetric(vertical: theme.spacings.s8),
             child: Text(
-              'No tasks found.',
+              'No results',
               style: theme.commonTextStyles.body.copyWith(
                 color: theme.colorsPalette.text.muted,
               ),
             ),
           )
-        else
-          Column(
-            children: filteredTasks.map((task) {
-              final project = task.projectId != null
-                  ? state.projects.firstWhereOrNull(
-                      (p) => p.id == task.projectId,
-                    )
-                  : null;
-              final isActive =
-                  state.isRunning && state.activeEntry?.taskId == task.id;
-              return _buildTaskItem(task, project, theme, context, isActive);
-            }).toList(),
-          ),
+        else ...[
+          if (filteredTasks.isNotEmpty) ...[
+            Text(
+              'Tasks',
+              style: theme.commonTextStyles.caption.copyWith(
+                color: theme.colorsPalette.text.secondary,
+              ),
+            ),
+            SizedBox(height: theme.spacings.s4),
+            Container(
+              decoration: BoxDecoration(
+                color: theme.colorsPalette.background.surface,
+                borderRadius: theme.radiuses.md.circular,
+                boxShadow: [theme.shadows.sm],
+              ),
+              child: Padding(
+                padding: EdgeInsets.all(theme.spacings.s8),
+                child: Column(
+                  children: filteredTasks.map((task) {
+                    final project = task.projectId != null
+                        ? state.projects.firstWhereOrNull(
+                            (p) => p.id == task.projectId,
+                          )
+                        : null;
+                    final isActive =
+                        state.isRunning && state.activeEntry?.taskId == task.id;
+                    return _buildTaskItem(
+                      task,
+                      project,
+                      theme,
+                      context,
+                      isActive,
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+            SizedBox(height: theme.spacings.s12),
+          ],
+          if (filteredProjects.isNotEmpty) ...[
+            Text(
+              'Projects',
+              style: theme.commonTextStyles.caption.copyWith(
+                color: theme.colorsPalette.text.secondary,
+              ),
+            ),
+            SizedBox(height: theme.spacings.s4),
+            Container(
+              decoration: BoxDecoration(
+                color: theme.colorsPalette.background.surface,
+                borderRadius: theme.radiuses.md.circular,
+                boxShadow: [theme.shadows.sm],
+              ),
+              child: Padding(
+                padding: EdgeInsets.all(theme.spacings.s8),
+                child: Column(
+                  children: filteredProjects.map((project) {
+                    return _buildProjectItem(project, theme, context);
+                  }).toList(),
+                ),
+              ),
+            ),
+            SizedBox(height: theme.spacings.s12),
+          ],
+          if (filteredEntries.isNotEmpty) ...[
+            Text(
+              'Time Entries',
+              style: theme.commonTextStyles.caption.copyWith(
+                color: theme.colorsPalette.text.secondary,
+              ),
+            ),
+            SizedBox(height: theme.spacings.s4),
+            Container(
+              decoration: BoxDecoration(
+                color: theme.colorsPalette.background.surface,
+                borderRadius: theme.radiuses.md.circular,
+                boxShadow: [theme.shadows.sm],
+              ),
+              child: Padding(
+                padding: EdgeInsets.all(theme.spacings.s8),
+                child: Column(
+                  children: filteredEntries.map((entry) {
+                    return _buildEntryItem(entry, state, theme, context);
+                  }).toList(),
+                ),
+              ),
+            ),
+          ],
+        ],
       ],
     );
   }
@@ -449,13 +625,7 @@ class _MiniPanelState extends State<MiniPanel> {
               color: palette.background.surface,
               // color: Colors.red,
               borderRadius: BorderRadius.circular(theme.spacings.s12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.15),
-                  blurRadius: 16,
-                  spreadRadius: 4,
-                ),
-              ],
+              boxShadow: [theme.shadows.md],
               border: Border.all(
                 color: palette.border.primary.withOpacity(0.5),
                 width: 1,
@@ -463,161 +633,154 @@ class _MiniPanelState extends State<MiniPanel> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(theme.spacings.s12),
-              child: AnimatedSize(
-                duration: const Duration(milliseconds: 200),
-                curve: Curves.easeInOut,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        color: theme.colorsPalette.accent.primaryMuted,
+              child: Column(
+                mainAxisSize: MainAxisSize.max,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: theme.colorsPalette.accent.primaryMuted,
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: theme.spacings.s16,
+                        vertical: theme.spacings.s8,
                       ),
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: theme.spacings.s16,
-                          vertical: theme.spacings.s8,
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Text(
-                              'Worklog Studio',
-                              style: theme.commonTextStyles.captionSemiBold,
-                            ),
-                            Expanded(flex: 1, child: const SizedBox.shrink()),
-                            PrimaryButton(
-                              type: ButtonType.ghost,
-                              size: ButtonSize.sm,
-                              leftIconWidget: const Icon(
-                                Icons.keyboard_double_arrow_down_sharp,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Worklog Studio',
+                            style: theme.commonTextStyles.captionSemiBold,
+                          ),
+                          Expanded(flex: 1, child: const SizedBox.shrink()),
+                          PrimaryButton(
+                            type: ButtonType.ghost,
+                            size: ButtonSize.sm,
+                            leftIconWidget: const Icon(Icons.add_outlined),
+                            onTap: () {},
+                          ),
+                          SizedBox(width: theme.spacings.s4),
+                          PrimaryButton(
+                            type: ButtonType.ghost,
+                            size: ButtonSize.sm,
+                            leftIconWidget: const Icon(Icons.desktop_windows),
+                            onTap: () {
+                              DesktopService().openMainWindowFromTray();
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: theme.colorsPalette.background.surface,
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: theme.spacings.s16,
+                        vertical: theme.spacings.s12,
+                      ),
+                      child: PrimaryInput(
+                        label: null,
+                        focusNode: _searchFocusNode,
+                        controller: _searchController,
+                        hintText: 'Search or start a task…',
+                        autofocus: true,
+                        suffixWidget:
+                            (_searchFocusNode.hasFocus || _query.isNotEmpty)
+                            ? GestureDetector(
+                                onTap: () {
+                                  _searchController.clear();
+                                  setState(() {
+                                    _query = '';
+                                  });
+                                },
+                                child: Icon(
+                                  Icons.close,
+                                  size: 16,
+                                  color: theme.colorsPalette.text.secondary,
+                                ),
+                              )
+                            : Icon(
+                                Icons.search,
+                                size: 16,
+                                color: theme.colorsPalette.text.muted,
                               ),
-                              onTap: _toggleExpansion,
-                            ),
-                            SizedBox(width: theme.spacings.s4),
-                            PrimaryButton(
-                              type: ButtonType.ghost,
-                              size: ButtonSize.sm,
-                              leftIconWidget: const Icon(Icons.add_outlined),
-                              onTap: () {},
-                            ),
-                            SizedBox(width: theme.spacings.s4),
-                            PrimaryButton(
-                              type: ButtonType.ghost,
-                              size: ButtonSize.sm,
-                              leftIconWidget: const Icon(Icons.desktop_windows),
-                              onTap: () {},
-                            ),
-                          ],
-                        ),
+                        onChanged: (value) {
+                          setState(() {
+                            _query = value.trim();
+                          });
+                        },
                       ),
                     ),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: theme.colorsPalette.background.surface,
-                      ),
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: theme.spacings.s16,
-                          vertical: theme.spacings.s12,
-                        ),
-                        child: PrimaryInput(
-                          label: null,
-                          controller: _searchController,
-                          hintText: 'Search or start a task…',
-                          autofocus: true,
-                          onChanged: (value) {
-                            setState(() {
-                              _query = value.trim();
-                              if (_query.isNotEmpty && !_isExpanded) {
-                                _isExpanded = true;
-                                _platform.invokeMethod('resizePopover', {
-                                  'isExpanded': _isExpanded,
-                                });
-                              }
-                            });
-                          },
-                        ),
-                      ),
-                    ),
-                    Container(
+                  ),
+                  Expanded(
+                    child: Container(
                       decoration: BoxDecoration(
                         color: theme.colorsPalette.background.surfaceMuted,
                       ),
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: theme.spacings.s16,
-                          vertical: theme.spacings.s12,
-                        ),
-                        child: _buildActiveSession(
-                          isRunning,
-                          activeEntry,
-                          state,
-                          theme,
-                          context,
-                        ),
-                      ),
-                    ),
-                    // Container(
-                    //   decoration: BoxDecoration(
-                    //     color: theme.colorsPalette.background.surfaceMuted,
-                    //   ),
-                    //   child: Expanded(
-                    //     child: Padding(
-                    //       padding: EdgeInsets.symmetric(
-                    //         horizontal: theme.spacings.s16,
-                    //         vertical: theme.spacings.s12,
-                    //       ),
-                    //       child: _buildActionGrid(theme),
-                    //     ),
-                    //   ),
-                    // ),
-                    if (_isExpanded) ...[
-                      Flexible(
-                        fit: FlexFit.loose,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: theme.colorsPalette.background.surfaceMuted,
-                          ),
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: theme.spacings.s16,
-                              vertical: theme.spacings.s12,
-                            ),
-                            child: SingleChildScrollView(
+                      child: _query.isEmpty
+                          ? Padding(
+                              padding: EdgeInsets.only(
+                                left: theme.spacings.s16,
+                                right: theme.spacings.s16,
+                                top: theme.spacings.s8,
+                                bottom: theme.spacings.s8,
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildActiveSession(
+                                    isRunning,
+                                    activeEntry,
+                                    state,
+                                    theme,
+                                    context,
+                                  ),
+                                  SizedBox(height: theme.spacings.s8),
+                                  _buildRecentActivity(state, theme),
+                                ],
+                              ),
+                            )
+                          : SingleChildScrollView(
                               physics: const ClampingScrollPhysics(),
-                              child: _query.isEmpty
-                                  ? _buildRecentActivity(state, theme)
-                                  : _buildSearchResults(state, theme),
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: theme.spacings.s16,
+                                  vertical: theme.spacings.s12,
+                                ),
+                                child: _buildSearchResults(state, theme),
+                              ),
+                            ),
+                    ),
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: theme.colorsPalette.accent.primaryMuted,
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: theme.spacings.s16,
+                        vertical: theme.spacings.s8,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Today 06h 15m   |   Total 24h 30m',
+                            style: theme.commonTextStyles.caption.copyWith(
+                              color: theme.colorsPalette.text.muted,
                             ),
                           ),
-                        ),
-                      ),
-                    ],
-                    Container(
-                      decoration: BoxDecoration(
-                        color: theme.colorsPalette.accent.primaryMuted,
-                      ),
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: theme.spacings.s16,
-                          vertical: theme.spacings.s8,
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Text(
-                              'Today 06h 15m | Total 24h 30m',
-                              style: theme.commonTextStyles.caption,
-                            ),
-                            const Spacer(),
-                          ],
-                        ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -685,7 +848,7 @@ class _MiniActiveTimerTextWrapperState
           style:
               widget.style ??
               context.theme.commonTextStyles.captionBold.copyWith(
-                color: Colors.white,
+                color: context.theme.colorsPalette.text.primary,
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
         );
