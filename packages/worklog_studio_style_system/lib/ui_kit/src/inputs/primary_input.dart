@@ -63,8 +63,8 @@ class _PrimaryInputState extends State<PrimaryInput> {
   Color get backgroundColor {
     if (widget.variant == InputVariant.ghost) return Colors.transparent;
     return switch (widget.state) {
-      InputState.enabled =>
-        hasFocus ? palette.background.surface : palette.background.surfaceMuted,
+      InputState.enabled => hasFocus ? Colors.white : Colors.white,
+      // hasFocus ? palette.background.surface : palette.background.surfaceMuted,
       InputState.warning => palette.background.surface,
       InputState.error => palette.background.surface,
       InputState.disabled => palette.background.surfaceMuted,
@@ -75,7 +75,10 @@ class _PrimaryInputState extends State<PrimaryInput> {
     if (widget.variant == InputVariant.ghost) return null;
     return switch (widget.state) {
       InputState.enabled =>
-        hasFocus ? Border.all(color: palette.border.focus) : null,
+        hasFocus
+            ? Border.all(color: Color(0xFFebf0fd))
+            : Border.all(color: Color(0xFFebf0fd)),
+      // hasFocus ? Border.all(color: palette.border.focus) : null,
       InputState.warning => Border.all(color: palette.accent.warning),
       InputState.error => Border.all(color: palette.accent.danger),
       InputState.disabled => null,

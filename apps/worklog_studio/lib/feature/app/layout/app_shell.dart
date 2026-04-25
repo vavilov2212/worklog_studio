@@ -37,6 +37,8 @@ class _AppShellState extends State<AppShell> {
         _onRouteSelected(AppRoute.history);
       } else if (route == 'tasks') {
         _onRouteSelected(AppRoute.tasks);
+      } else if (route == 'projects') {
+        _onRouteSelected(AppRoute.projects);
       }
     });
   }

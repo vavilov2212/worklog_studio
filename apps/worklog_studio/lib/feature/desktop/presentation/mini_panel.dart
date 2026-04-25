@@ -5,10 +5,7 @@ import 'package:worklog_studio/domain/time_entry.dart';
 import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/feature/desktop/presentation/mini_tracker_cubit.dart';
-import 'package:worklog_studio/feature/time_tracker/presentation/components/active_timer_text.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
-import 'package:worklog_studio/state/project_task_state.dart';
-import 'package:worklog_studio/state/entity_resolver.dart';
 import 'package:collection/collection.dart';
 import 'package:worklog_studio/core/services/desktop/desktop_service.dart';
 
@@ -85,60 +82,75 @@ class _MiniPanelState extends State<MiniPanel> {
       decoration: BoxDecoration(
         color: theme.colorsPalette.background.surface,
         borderRadius: theme.radiuses.md.circular,
+        border: Border.all(color: Color(0xFFeaeffd)),
         boxShadow: [theme.shadows.sm],
       ),
+
       child: Padding(
-        padding: EdgeInsets.all(theme.spacings.s12),
+        padding: EdgeInsets.symmetric(
+          horizontal: theme.spacings.s16,
+          vertical: theme.spacings.s16,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'ACTIVE SESSION',
-              style: theme.commonTextStyles.caption2.copyWith(
-                color: theme.colorsPalette.accent.primary,
+              style: theme.commonTextStyles.caption2Bold.copyWith(
+                color: theme.colorsPalette.text.secondary2,
+                letterSpacing: 1.1,
               ),
             ),
             SizedBox(height: theme.spacings.s8),
-            Text(
-              taskName,
-              style: theme.commonTextStyles.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            if (projectName != null) ...[
-              SizedBox(height: theme.spacings.s2),
-              Text(
-                projectName,
-                style: theme.commonTextStyles.caption.copyWith(
-                  color: theme.colorsPalette.text.secondary,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-            SizedBox(height: theme.spacings.s12),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                _MiniActiveTimerTextWrapper(
-                  entry: activeEntry,
-                  style: theme.commonTextStyles.h2.copyWith(
-                    color: theme.colorsPalette.text.primary,
-                    fontWeight: FontWeight
-                        .w500, // reduce visual weight slightly from default
-                    fontFeatures: const [FontFeature.tabularFigures()],
+            Padding(
+              padding: EdgeInsets.all(theme.spacings.s12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+
+                children: [
+                  Text(
+                    taskName,
+                    style: theme.commonTextStyles.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                const Spacer(),
-                PrimaryButton(
-                  type: ButtonType.danger,
-                  size: ButtonSize.sm,
-                  leftIconWidget: const Icon(Icons.stop_sharp),
-                  onTap: () {
-                    context.read<MiniTrackerCubit>().stopTimer();
-                  },
-                ),
-              ],
+                  if (projectName != null) ...[
+                    SizedBox(height: theme.spacings.s2),
+                    Text(
+                      projectName,
+                      style: theme.commonTextStyles.caption.copyWith(
+                        color: theme.colorsPalette.text.secondary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                  SizedBox(height: theme.spacings.s24),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      _MiniActiveTimerTextWrapper(
+                        entry: activeEntry,
+                        style: theme.commonTextStyles.h2.copyWith(
+                          color: theme.colorsPalette.text.primary,
+                          fontWeight: FontWeight
+                              .w500, // reduce visual weight slightly from default
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                      const Spacer(),
+                      PrimaryButton(
+                        type: ButtonType.danger,
+                        size: ButtonSize.sm,
+                        leftIconWidget: const Icon(Icons.stop_sharp),
+                        onTap: () {
+                          context.read<MiniTrackerCubit>().stopTimer();
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -175,37 +187,46 @@ class _MiniPanelState extends State<MiniPanel> {
     BuildContext context,
     bool isActive,
   ) {
+    onTap() {
+      context.read<MiniTrackerCubit>().startTimer(
+        projectId: project?.id,
+        taskId: task.id,
+      );
+      _searchController.clear();
+      _searchFocusNode.unfocus();
+      setState(() {
+        _query = '';
+      });
+    }
+
     return _HoverableListItem(
-      leading: Icon(
-        Icons.check_circle_outline,
-        size: 18,
-        color: theme.colorsPalette.accent.primary,
-      ),
       title: task.title,
       subtitle: project?.name,
       trailing: isActive
-          ? Icon(
-              Icons.radio_button_checked,
-              size: 16,
-              color: theme.colorsPalette.accent.primary,
+          ? Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: theme.spacings.s12,
+                vertical: theme.spacings.s16,
+              ),
+              child: Icon(
+                Icons.radio_button_checked,
+                size: 14,
+                color: theme.colorsPalette.accent.danger,
+              ),
             )
-          : PrimaryButton(
-              type: ButtonType.ghost,
-              size: ButtonSize.sm,
-              leftIcon: WorklogStudioAssets.vectors.playFilled64Svg,
-              onTap: () {
-                context.read<MiniTrackerCubit>().startTimer(
-                  projectId: project?.id,
-                  taskId: task.id,
-                );
-                _searchController.clear();
-                _searchFocusNode.unfocus();
-                setState(() {
-                  _query = '';
-                });
-              },
-            ),
-      onTap: () {},
+          : SizedBox.shrink(),
+      trailingWidget: isActive
+          ? (_) => SizedBox.shrink()
+          : (isHovered) {
+              return PrimaryButton(
+                type: isHovered ? ButtonType.primary : ButtonType.ghost,
+                initialAnimationDuration: Duration(milliseconds: 20),
+                size: ButtonSize.sm,
+                leftIcon: WorklogStudioAssets.vectors.playFilled24Svg,
+                onTap: onTap,
+              );
+            },
+      onTap: onTap,
     );
   }
 
@@ -214,6 +235,10 @@ class _MiniPanelState extends State<MiniPanel> {
     AppThemeExtension theme,
     BuildContext context,
   ) {
+    onTap() {
+      DesktopService().openMainWindowFromTray(route: "projects");
+    }
+
     return _HoverableListItem(
       leading: Icon(
         Icons.folder_outlined,
@@ -221,15 +246,14 @@ class _MiniPanelState extends State<MiniPanel> {
         color: theme.colorsPalette.accent.primary,
       ),
       title: project.name,
-      trailing: PrimaryButton(
-        type: ButtonType.ghost,
+      trailingWidget: (isHovered) => PrimaryButton(
+        type: isHovered ? ButtonType.primary : ButtonType.ghost,
+        initialAnimationDuration: Duration(milliseconds: 20),
         size: ButtonSize.sm,
-        leftIconWidget: const Icon(Icons.arrow_forward, size: 14),
-        onTap: () {
-          DesktopService().openMainWindowFromTray(route: "projects");
-        },
+        leftIcon: WorklogStudioAssets.vectors.arrowSmallRight24Svg,
+        onTap: onTap,
       ),
-      onTap: () {},
+      onTap: onTap,
     );
   }
 
@@ -254,38 +278,47 @@ class _MiniPanelState extends State<MiniPanel> {
         ? ((project != null ? '${project.name} • ' : '') + '$count entries')
         : project?.name;
 
+    onTap() {
+      context.read<MiniTrackerCubit>().startTimer(
+        projectId: project?.id,
+        taskId: task?.id,
+        comment: entry.comment,
+      );
+      _searchController.clear();
+      _searchFocusNode.unfocus();
+      setState(() {
+        _query = '';
+      });
+    }
+
     return _HoverableListItem(
-      leading: Icon(
-        Icons.access_time,
-        size: 18,
-        color: theme.colorsPalette.accent.primary,
-      ),
       title: title,
       subtitle: subtitleText,
       trailing: isActive
-          ? Icon(
-              Icons.radio_button_checked,
-              size: 16,
-              color: theme.colorsPalette.accent.primary,
+          ? Container(
+              padding: EdgeInsets.symmetric(
+                vertical: context.theme.spacings.s8,
+                horizontal: context.theme.spacings.s12,
+              ),
+              child: Icon(
+                Icons.radio_button_checked,
+                size: 14,
+                color: theme.colorsPalette.accent.danger,
+              ),
             )
-          : PrimaryButton(
-              type: ButtonType.ghost,
-              size: ButtonSize.sm,
-              leftIcon: WorklogStudioAssets.vectors.playerPlay24Svg,
-              onTap: () {
-                context.read<MiniTrackerCubit>().startTimer(
-                  projectId: project?.id,
-                  taskId: task?.id,
-                  comment: entry.comment,
-                );
-                _searchController.clear();
-                _searchFocusNode.unfocus();
-                setState(() {
-                  _query = '';
-                });
-              },
-            ),
-      onTap: () {},
+          : SizedBox.shrink(),
+      trailingWidget: isActive
+          ? (_) => SizedBox.shrink()
+          : (isHovered) {
+              return PrimaryButton(
+                type: isHovered ? ButtonType.primary : ButtonType.ghost,
+                initialAnimationDuration: Duration(milliseconds: 20),
+                size: ButtonSize.sm,
+                leftIcon: WorklogStudioAssets.vectors.playFilled24Svg,
+                onTap: onTap,
+              );
+            },
+      onTap: onTap,
     );
   }
 
@@ -313,6 +346,8 @@ class _MiniPanelState extends State<MiniPanel> {
       decoration: BoxDecoration(
         color: theme.colorsPalette.background.surface,
         borderRadius: theme.radiuses.md.circular,
+        border: Border.all(color: Color(0xFFeaeffd)),
+
         boxShadow: [theme.shadows.sm],
       ),
       child: Padding(
@@ -337,10 +372,9 @@ class _MiniPanelState extends State<MiniPanel> {
                     vertical: theme.spacings.s2,
                   ),
                   child: Text(
-                    'View All',
-                    style: theme.commonTextStyles.caption.copyWith(
+                    'VIEW ALL',
+                    style: theme.commonTextStyles.caption2.copyWith(
                       color: theme.colorsPalette.accent.primary,
-                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
@@ -397,7 +431,10 @@ class _MiniPanelState extends State<MiniPanel> {
             filteredProjects.isEmpty &&
             filteredEntries.isEmpty)
           Padding(
-            padding: EdgeInsets.symmetric(vertical: theme.spacings.s8),
+            padding: EdgeInsets.symmetric(
+              vertical: theme.spacings.s12,
+              horizontal: theme.spacings.s12,
+            ),
             child: Text(
               'No results',
               style: theme.commonTextStyles.body.copyWith(
@@ -413,12 +450,13 @@ class _MiniPanelState extends State<MiniPanel> {
               decoration: BoxDecoration(
                 color: theme.colorsPalette.background.surface,
                 borderRadius: theme.radiuses.md.circular,
+                border: Border.all(color: Color(0xFFeaeffd)),
                 boxShadow: [theme.shadows.sm],
               ),
               child: Padding(
                 padding: EdgeInsets.symmetric(
-                  vertical: theme.spacings.s4,
-                  horizontal: theme.spacings.s4,
+                  vertical: theme.spacings.s12,
+                  horizontal: theme.spacings.s12,
                 ),
                 child: Column(
                   children: filteredTasks.map((task) {
@@ -449,12 +487,13 @@ class _MiniPanelState extends State<MiniPanel> {
               decoration: BoxDecoration(
                 color: theme.colorsPalette.background.surface,
                 borderRadius: theme.radiuses.md.circular,
+                border: Border.all(color: Color(0xFFeaeffd)),
                 boxShadow: [theme.shadows.sm],
               ),
               child: Padding(
                 padding: EdgeInsets.symmetric(
-                  vertical: theme.spacings.s4,
-                  horizontal: theme.spacings.s4,
+                  vertical: theme.spacings.s12,
+                  horizontal: theme.spacings.s12,
                 ),
                 child: Column(
                   children: filteredProjects.map((project) {
@@ -472,12 +511,13 @@ class _MiniPanelState extends State<MiniPanel> {
               decoration: BoxDecoration(
                 color: theme.colorsPalette.background.surface,
                 borderRadius: theme.radiuses.md.circular,
+                border: Border.all(color: Color(0xFFeaeffd)),
                 boxShadow: [theme.shadows.sm],
               ),
               child: Padding(
                 padding: EdgeInsets.symmetric(
-                  vertical: theme.spacings.s4,
-                  horizontal: theme.spacings.s4,
+                  vertical: theme.spacings.s12,
+                  horizontal: theme.spacings.s12,
                 ),
                 child: Column(
                   children: filteredEntries.map((entry) {
@@ -557,8 +597,7 @@ class _MiniPanelState extends State<MiniPanel> {
           child: Container(
             margin: const EdgeInsets.all(0),
             decoration: BoxDecoration(
-              color: palette.background.surface,
-              // color: Colors.red,
+              color: Color(0xFFf8fafc),
               borderRadius: BorderRadius.circular(theme.spacings.s12),
               boxShadow: [theme.shadows.md],
               border: Border.all(
@@ -568,18 +607,20 @@ class _MiniPanelState extends State<MiniPanel> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(theme.spacings.s12),
+
               child: Column(
                 mainAxisSize: MainAxisSize.max,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
                     decoration: BoxDecoration(
-                      color: theme.colorsPalette.accent.primaryMuted,
+                      color: Colors.white,
+
+                      border: Border.all(color: Color(0xFFebf0fd)),
                     ),
                     child: Padding(
                       padding: EdgeInsets.symmetric(
                         horizontal: theme.spacings.s16,
-                        vertical: theme.spacings.s8,
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
@@ -611,24 +652,22 @@ class _MiniPanelState extends State<MiniPanel> {
                       ),
                     ),
                   ),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: theme.colorsPalette.background.surface,
+                  SizedBox(height: theme.spacings.s16),
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: theme.spacings.s16,
                     ),
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: theme.spacings.s16,
-                        vertical: theme.spacings.s12,
-                      ),
-                      child: PrimaryInput(
-                        label: null,
-                        focusNode: _searchFocusNode,
-                        controller: _searchController,
-                        hintText: 'Search or start a task…',
-                        autofocus: true,
-                        suffixWidget:
-                            (_searchFocusNode.hasFocus || _query.isNotEmpty)
-                            ? GestureDetector(
+                    child: PrimaryInput(
+                      label: null,
+                      focusNode: _searchFocusNode,
+                      controller: _searchController,
+                      hintText: 'Search or start a task…',
+                      autofocus: true,
+                      suffixWidget:
+                          (_searchFocusNode.hasFocus || _query.isNotEmpty)
+                          ? MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              child: GestureDetector(
                                 onTap: () {
                                   _searchController.clear();
                                   setState(() {
@@ -640,32 +679,28 @@ class _MiniPanelState extends State<MiniPanel> {
                                   size: 16,
                                   color: theme.colorsPalette.text.secondary,
                                 ),
-                              )
-                            : Icon(
-                                Icons.search,
-                                size: 16,
-                                color: theme.colorsPalette.text.muted,
                               ),
-                        onChanged: (value) {
-                          setState(() {
-                            _query = value.trim();
-                          });
-                        },
-                      ),
+                            )
+                          : Icon(
+                              Icons.search,
+                              size: 16,
+                              color: theme.colorsPalette.text.muted,
+                            ),
+                      onChanged: (value) {
+                        setState(() {
+                          _query = value.trim();
+                        });
+                      },
                     ),
                   ),
+                  SizedBox(height: theme.spacings.s16),
                   Expanded(
                     child: Container(
-                      decoration: BoxDecoration(
-                        color: theme.colorsPalette.background.surfaceMuted,
-                      ),
+                      decoration: BoxDecoration(color: Color(0xFFf8fafc)),
                       child: _query.isEmpty
                           ? Padding(
-                              padding: EdgeInsets.only(
-                                left: theme.spacings.s16,
-                                right: theme.spacings.s16,
-                                top: theme.spacings.s8,
-                                bottom: theme.spacings.s8,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: theme.spacings.s16,
                               ),
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
@@ -678,7 +713,7 @@ class _MiniPanelState extends State<MiniPanel> {
                                     theme,
                                     context,
                                   ),
-                                  SizedBox(height: theme.spacings.s8),
+                                  SizedBox(height: theme.spacings.s16),
                                   _buildRecentActivity(state, theme),
                                 ],
                               ),
@@ -688,7 +723,6 @@ class _MiniPanelState extends State<MiniPanel> {
                               child: Padding(
                                 padding: EdgeInsets.symmetric(
                                   horizontal: theme.spacings.s16,
-                                  vertical: theme.spacings.s12,
                                 ),
                                 child: _buildSearchResults(state, theme),
                               ),
@@ -698,6 +732,7 @@ class _MiniPanelState extends State<MiniPanel> {
                   Container(
                     decoration: BoxDecoration(
                       color: theme.colorsPalette.accent.primaryMuted,
+                      border: Border.all(color: Color(0xFFeaeffd)),
                     ),
                     child: Padding(
                       padding: EdgeInsets.symmetric(
@@ -796,18 +831,22 @@ class _MiniActiveTimerTextWrapperState
 }
 
 class _HoverableListItem extends StatefulWidget {
-  final Widget leading;
+  final Widget? leading;
+  final Widget Function(bool isHovered)? leadingWidget;
   final String title;
   final String? subtitle;
-  final Widget trailing;
+  final Widget Function(bool isHovered)? trailingWidget;
+  final Widget? trailing;
   final VoidCallback onTap;
 
   const _HoverableListItem({
     super.key,
-    required this.leading,
+    this.leading,
+    this.leadingWidget,
     required this.title,
     this.subtitle,
-    required this.trailing,
+    this.trailingWidget,
+    this.trailing,
     required this.onTap,
   });
 
@@ -822,14 +861,15 @@ class _HoverableListItemState extends State<_HoverableListItem> {
   Widget build(BuildContext context) {
     final theme = context.theme;
     return MouseRegion(
+      cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       child: GestureDetector(
         onTap: widget.onTap,
         child: Container(
           padding: EdgeInsets.symmetric(
+            vertical: theme.spacings.s8,
             horizontal: theme.spacings.s12,
-            vertical: theme.spacings.s12,
           ),
           decoration: BoxDecoration(
             color: _isHovered
@@ -840,8 +880,11 @@ class _HoverableListItemState extends State<_HoverableListItem> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              widget.leading,
-              SizedBox(width: theme.spacings.s12),
+              widget.leading ?? SizedBox.shrink(),
+              widget.leadingWidget?.call(_isHovered) ?? SizedBox.shrink(),
+              (widget.leading == null && widget.leadingWidget == null)
+                  ? SizedBox.shrink()
+                  : SizedBox(width: theme.spacings.s12),
               Expanded(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -870,7 +913,8 @@ class _HoverableListItemState extends State<_HoverableListItem> {
                 ),
               ),
               SizedBox(width: theme.spacings.s8),
-              widget.trailing,
+              widget.trailing ?? SizedBox.shrink(),
+              widget.trailingWidget?.call(_isHovered) ?? SizedBox.shrink(),
             ],
           ),
         ),
