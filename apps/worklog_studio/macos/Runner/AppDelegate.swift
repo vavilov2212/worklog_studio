@@ -35,7 +35,7 @@ class AppDelegate: FlutterAppDelegate {
             flutterViewController.backgroundColor = .clear // Убираем черный фон у Flutter
             
             popoverPanel = PopoverPanel(
-                contentRect: NSRect(x: 0, y: 0, width: 320, height: 520),
+                contentRect: NSRect(x: 0, y: 0, width: 360, height: 650),
                 flutterViewController: flutterViewController
             )
             
@@ -97,8 +97,8 @@ class AppDelegate: FlutterAppDelegate {
     func showPopover() {
         guard let panel = popoverPanel else { return }
         
-        let width: CGFloat = 320
-        let newHeight: CGFloat = 520
+        let width: CGFloat = 360
+        let newHeight: CGFloat = 650
         
         let mouseLoc = NSEvent.mouseLocation
         let currentScreen = NSScreen.screens.first(where: { NSMouseInRect(mouseLoc, $0.frame, false) }) ?? NSScreen.main

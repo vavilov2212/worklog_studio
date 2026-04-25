@@ -148,6 +148,26 @@ class _MiniPanelState extends State<MiniPanel> {
 
   // ActionGrid removed
 
+  Widget _buildSectionHeader(
+    String title,
+    AppThemeExtension theme, {
+    Widget? trailing,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          title.toUpperCase(),
+          style: theme.commonTextStyles.caption2Bold.copyWith(
+            color: theme.colorsPalette.text.secondary2,
+            letterSpacing: 1.1,
+          ),
+        ),
+        if (trailing != null) ...[const Spacer(), trailing],
+      ],
+    );
+  }
+
   Widget _buildTaskItem(
     Task task,
     Project? project,
@@ -155,48 +175,21 @@ class _MiniPanelState extends State<MiniPanel> {
     BuildContext context,
     bool isActive,
   ) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: theme.spacings.s4),
-      child: Row(
-        children: [
-          Icon(Icons.work, size: 16, color: theme.colorsPalette.accent.primary),
-          SizedBox(width: theme.spacings.s8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  task.title,
-                  style: theme.commonTextStyles.body,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (project != null) ...[
-                  SizedBox(height: theme.spacings.s0),
-                  Text(
-                    project.name,
-                    style: theme.commonTextStyles.caption.copyWith(
-                      color: theme.colorsPalette.text.secondary,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ],
-            ),
-          ),
-          SizedBox(width: theme.spacings.s8),
-          if (isActive)
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: theme.spacings.s8),
-              child: Icon(
-                Icons.radio_button_checked,
-                size: 16,
-                color: theme.colorsPalette.accent.primary,
-              ),
+    return _HoverableListItem(
+      leading: Icon(
+        Icons.check_circle_outline,
+        size: 18,
+        color: theme.colorsPalette.accent.primary,
+      ),
+      title: task.title,
+      subtitle: project?.name,
+      trailing: isActive
+          ? Icon(
+              Icons.radio_button_checked,
+              size: 16,
+              color: theme.colorsPalette.accent.primary,
             )
-          else
-            PrimaryButton(
+          : PrimaryButton(
               type: ButtonType.ghost,
               size: ButtonSize.sm,
               leftIcon: WorklogStudioAssets.vectors.playFilled64Svg,
@@ -212,8 +205,7 @@ class _MiniPanelState extends State<MiniPanel> {
                 });
               },
             ),
-        ],
-      ),
+      onTap: () {},
     );
   }
 
@@ -222,35 +214,22 @@ class _MiniPanelState extends State<MiniPanel> {
     AppThemeExtension theme,
     BuildContext context,
   ) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: theme.spacings.s4),
-      child: Row(
-        children: [
-          Icon(
-            Icons.folder,
-            size: 16,
-            color: theme.colorsPalette.accent.primary,
-          ),
-          SizedBox(width: theme.spacings.s8),
-          Expanded(
-            child: Text(
-              project.name,
-              style: theme.commonTextStyles.body,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          SizedBox(width: theme.spacings.s8),
-          PrimaryButton(
-            type: ButtonType.ghost,
-            size: ButtonSize.sm,
-            leftIconWidget: const Icon(Icons.arrow_forward, size: 14),
-            onTap: () {
-              DesktopService().openMainWindowFromTray(route: "projects");
-            },
-          ),
-        ],
+    return _HoverableListItem(
+      leading: Icon(
+        Icons.folder_outlined,
+        size: 18,
+        color: theme.colorsPalette.accent.primary,
       ),
+      title: project.name,
+      trailing: PrimaryButton(
+        type: ButtonType.ghost,
+        size: ButtonSize.sm,
+        leftIconWidget: const Icon(Icons.arrow_forward, size: 14),
+        onTap: () {
+          DesktopService().openMainWindowFromTray(route: "projects");
+        },
+      ),
+      onTap: () {},
     );
   }
 
@@ -272,60 +251,27 @@ class _MiniPanelState extends State<MiniPanel> {
 
     final hasCount = count != null && count > 1;
     final subtitleText = hasCount
-        ? (project != null
-              ? '${project.name} • $count entries'
-              : '$count entries')
-        : (project?.name);
+        ? ((project != null ? '${project.name} • ' : '') + '$count entries')
+        : project?.name;
 
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: theme.spacings.s4),
-      child: Row(
-        children: [
-          Icon(
-            Icons.access_time,
-            size: 16,
-            color: theme.colorsPalette.accent.primary,
-          ),
-          SizedBox(width: theme.spacings.s8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: theme.commonTextStyles.body,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (subtitleText != null) ...[
-                  SizedBox(height: theme.spacings.s0),
-                  Text(
-                    subtitleText,
-                    style: theme.commonTextStyles.caption.copyWith(
-                      color: theme.colorsPalette.text.secondary,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ],
-            ),
-          ),
-          SizedBox(width: theme.spacings.s8),
-          if (isActive)
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: theme.spacings.s8),
-              child: Icon(
-                Icons.radio_button_checked,
-                size: 16,
-                color: theme.colorsPalette.accent.primary,
-              ),
+    return _HoverableListItem(
+      leading: Icon(
+        Icons.access_time,
+        size: 18,
+        color: theme.colorsPalette.accent.primary,
+      ),
+      title: title,
+      subtitle: subtitleText,
+      trailing: isActive
+          ? Icon(
+              Icons.radio_button_checked,
+              size: 16,
+              color: theme.colorsPalette.accent.primary,
             )
-          else
-            PrimaryButton(
+          : PrimaryButton(
               type: ButtonType.ghost,
               size: ButtonSize.sm,
-              leftIcon: WorklogStudioAssets.vectors.playFilled64Svg,
+              leftIcon: WorklogStudioAssets.vectors.playerPlay24Svg,
               onTap: () {
                 context.read<MiniTrackerCubit>().startTimer(
                   projectId: project?.id,
@@ -339,8 +285,7 @@ class _MiniPanelState extends State<MiniPanel> {
                 });
               },
             ),
-        ],
-      ),
+      onTap: () {},
     );
   }
 
@@ -364,51 +309,47 @@ class _MiniPanelState extends State<MiniPanel> {
 
     final recentGroups = groupedEntries.values.take(3).toList();
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorsPalette.background.surface,
+        borderRadius: theme.radiuses.md.circular,
+        boxShadow: [theme.shadows.sm],
+      ),
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          vertical: theme.spacings.s12,
+          horizontal: theme.spacings.s12,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            _buildSectionHeader(
               'RECENT ACTIVITY',
-              style: theme.commonTextStyles.caption2Bold.copyWith(
-                color: theme.colorsPalette.text.secondary2,
-              ),
-            ),
-            const Spacer(),
-            InkWell(
-              onTap: () {
-                DesktopService().openMainWindowFromTray(route: "history");
-              },
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: theme.spacings.s4,
-                  vertical: theme.spacings.s2,
-                ),
-                child: Text(
-                  'View All',
-                  style: theme.commonTextStyles.caption2.copyWith(
-                    color: theme.colorsPalette.accent.primary,
+              theme,
+              trailing: InkWell(
+                onTap: () {
+                  DesktopService().openMainWindowFromTray(route: "history");
+                },
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: theme.spacings.s4,
+                    vertical: theme.spacings.s2,
+                  ),
+                  child: Text(
+                    'View All',
+                    style: theme.commonTextStyles.caption.copyWith(
+                      color: theme.colorsPalette.accent.primary,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ),
             ),
-          ],
-        ),
-        SizedBox(height: theme.spacings.s4),
-        Container(
-          decoration: BoxDecoration(
-            color: theme.colorsPalette.background.surface,
-            borderRadius: theme.radiuses.md.circular,
-            boxShadow: [theme.shadows.sm],
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(theme.spacings.s8),
-            child: recentGroups.isEmpty
+            SizedBox(height: theme.spacings.s8),
+            recentGroups.isEmpty
                 ? Padding(
-                    padding: EdgeInsets.symmetric(vertical: theme.spacings.s8),
+                    padding: EdgeInsets.all(theme.spacings.s12),
                     child: Text(
                       'No recent activity.',
                       style: theme.commonTextStyles.body.copyWith(
@@ -427,9 +368,9 @@ class _MiniPanelState extends State<MiniPanel> {
                       );
                     }).toList(),
                   ),
-          ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
@@ -466,12 +407,7 @@ class _MiniPanelState extends State<MiniPanel> {
           )
         else ...[
           if (filteredTasks.isNotEmpty) ...[
-            Text(
-              'Tasks',
-              style: theme.commonTextStyles.caption.copyWith(
-                color: theme.colorsPalette.text.secondary,
-              ),
-            ),
+            _buildSectionHeader('TASKS', theme),
             SizedBox(height: theme.spacings.s4),
             Container(
               decoration: BoxDecoration(
@@ -480,7 +416,10 @@ class _MiniPanelState extends State<MiniPanel> {
                 boxShadow: [theme.shadows.sm],
               ),
               child: Padding(
-                padding: EdgeInsets.all(theme.spacings.s8),
+                padding: EdgeInsets.symmetric(
+                  vertical: theme.spacings.s4,
+                  horizontal: theme.spacings.s4,
+                ),
                 child: Column(
                   children: filteredTasks.map((task) {
                     final project = task.projectId != null
@@ -504,12 +443,7 @@ class _MiniPanelState extends State<MiniPanel> {
             SizedBox(height: theme.spacings.s12),
           ],
           if (filteredProjects.isNotEmpty) ...[
-            Text(
-              'Projects',
-              style: theme.commonTextStyles.caption.copyWith(
-                color: theme.colorsPalette.text.secondary,
-              ),
-            ),
+            _buildSectionHeader('PROJECTS', theme),
             SizedBox(height: theme.spacings.s4),
             Container(
               decoration: BoxDecoration(
@@ -518,7 +452,10 @@ class _MiniPanelState extends State<MiniPanel> {
                 boxShadow: [theme.shadows.sm],
               ),
               child: Padding(
-                padding: EdgeInsets.all(theme.spacings.s8),
+                padding: EdgeInsets.symmetric(
+                  vertical: theme.spacings.s4,
+                  horizontal: theme.spacings.s4,
+                ),
                 child: Column(
                   children: filteredProjects.map((project) {
                     return _buildProjectItem(project, theme, context);
@@ -529,12 +466,7 @@ class _MiniPanelState extends State<MiniPanel> {
             SizedBox(height: theme.spacings.s12),
           ],
           if (filteredEntries.isNotEmpty) ...[
-            Text(
-              'Time Entries',
-              style: theme.commonTextStyles.caption.copyWith(
-                color: theme.colorsPalette.text.secondary,
-              ),
-            ),
+            _buildSectionHeader('RECENT LOGS', theme),
             SizedBox(height: theme.spacings.s4),
             Container(
               decoration: BoxDecoration(
@@ -543,7 +475,10 @@ class _MiniPanelState extends State<MiniPanel> {
                 boxShadow: [theme.shadows.sm],
               ),
               child: Padding(
-                padding: EdgeInsets.all(theme.spacings.s8),
+                padding: EdgeInsets.symmetric(
+                  vertical: theme.spacings.s4,
+                  horizontal: theme.spacings.s4,
+                ),
                 child: Column(
                   children: filteredEntries.map((entry) {
                     return _buildEntryItem(entry, state, theme, context);
@@ -657,14 +592,17 @@ class _MiniPanelState extends State<MiniPanel> {
                           PrimaryButton(
                             type: ButtonType.ghost,
                             size: ButtonSize.sm,
-                            leftIconWidget: const Icon(Icons.add_outlined),
+                            leftIcon: WorklogStudioAssets.vectors.plus24Svg,
                             onTap: () {},
                           ),
                           SizedBox(width: theme.spacings.s4),
                           PrimaryButton(
                             type: ButtonType.ghost,
                             size: ButtonSize.sm,
-                            leftIconWidget: const Icon(Icons.desktop_windows),
+                            leftIconWidget: const Icon(
+                              Icons.desktop_windows,
+                              size: 16,
+                            ),
                             onTap: () {
                               DesktopService().openMainWindowFromTray();
                             },
@@ -853,6 +791,90 @@ class _MiniActiveTimerTextWrapperState
               ),
         );
       },
+    );
+  }
+}
+
+class _HoverableListItem extends StatefulWidget {
+  final Widget leading;
+  final String title;
+  final String? subtitle;
+  final Widget trailing;
+  final VoidCallback onTap;
+
+  const _HoverableListItem({
+    super.key,
+    required this.leading,
+    required this.title,
+    this.subtitle,
+    required this.trailing,
+    required this.onTap,
+  });
+
+  @override
+  State<_HoverableListItem> createState() => _HoverableListItemState();
+}
+
+class _HoverableListItemState extends State<_HoverableListItem> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: theme.spacings.s12,
+            vertical: theme.spacings.s12,
+          ),
+          decoration: BoxDecoration(
+            color: _isHovered
+                ? theme.colorsPalette.accent.primaryMuted
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(theme.radiuses.sm),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              widget.leading,
+              SizedBox(width: theme.spacings.s12),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.title,
+                      style: theme.commonTextStyles.body.copyWith(
+                        color: theme.colorsPalette.text.primary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (widget.subtitle != null) ...[
+                      SizedBox(height: theme.spacings.s2),
+                      Text(
+                        widget.subtitle!,
+                        style: theme.commonTextStyles.caption.copyWith(
+                          color: theme.colorsPalette.text.secondary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              SizedBox(width: theme.spacings.s8),
+              widget.trailing,
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
