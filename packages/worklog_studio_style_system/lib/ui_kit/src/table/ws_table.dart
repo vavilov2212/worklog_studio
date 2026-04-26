@@ -3,13 +3,15 @@ import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 
 class WsTableColumn<T> {
   final String title;
-  final Widget Function(BuildContext context, T item) builder;
+  final Widget Function(BuildContext context, T item, bool isHovered) builder;
   final int flex;
+  final Alignment alignment;
 
   const WsTableColumn({
     required this.title,
     required this.builder,
     this.flex = 1,
+    this.alignment = Alignment.centerLeft,
   });
 }
 
@@ -97,18 +99,20 @@ class WsTable<T> extends StatelessWidget {
       ),
       child: Row(
         children: columns.asMap().entries.map((entry) {
-          final isLast = entry.key == columns.length - 1;
           final col = entry.value;
           return Expanded(
             flex: col.flex,
             child: Padding(
-              padding: EdgeInsets.only(right: isLast ? 0 : theme.spacings.s24),
-              child: Text(
-                col.title.toUpperCase(),
-                style: theme.commonTextStyles.caption.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: palette.text.secondary,
-                  letterSpacing: 0.5,
+              padding: EdgeInsets.only(right: theme.spacings.s24),
+              child: Align(
+                alignment: col.alignment,
+                child: Text(
+                  col.title.toUpperCase(),
+                  style: theme.commonTextStyles.caption.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: palette.text.secondary,
+                    letterSpacing: 0.5,
+                  ),
                 ),
               ),
             ),
@@ -177,15 +181,15 @@ class _WsTableRowState<T> extends State<_WsTableRow<T>> {
             ),
             child: Row(
               children: widget.columns.asMap().entries.map((entry) {
-                final isLast = entry.key == widget.columns.length - 1;
                 final col = entry.value;
                 return Expanded(
                   flex: col.flex,
                   child: Padding(
-                    padding: EdgeInsets.only(
-                      right: isLast ? 0 : theme.spacings.s24,
+                    padding: EdgeInsets.only(right: theme.spacings.s24),
+                    child: Align(
+                      alignment: col.alignment,
+                      child: col.builder(context, widget.item, _isHovered),
                     ),
-                    child: col.builder(context, widget.item),
                   ),
                 );
               }).toList(),

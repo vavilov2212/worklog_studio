@@ -8,6 +8,7 @@ import 'package:worklog_studio/state/entity_resolver.dart';
 import 'components/tasks_card.dart';
 import 'components/tasks_drawer.dart';
 import 'package:worklog_studio/feature/common/presentation/drawer_controller_state.dart';
+import 'components/task_actions_cell.dart';
 
 enum TaskViewMode { cards, table }
 
@@ -173,7 +174,7 @@ class TaskList extends StatelessWidget {
       WsTableColumn(
         title: 'Task Name',
         flex: 3,
-        builder: (context, item) {
+        builder: (context, item, isHovered) {
           final palette = theme.colorsPalette;
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -200,7 +201,7 @@ class TaskList extends StatelessWidget {
       WsTableColumn(
         title: 'Time',
         flex: 2,
-        builder: (context, item) {
+        builder: (context, item, isHovered) {
           final duration = item.duration(DateTime.now());
           return Text(
             _formatExactDuration(duration),
@@ -211,7 +212,7 @@ class TaskList extends StatelessWidget {
       WsTableColumn(
         title: 'Status',
         flex: 1,
-        builder: (context, item) {
+        builder: (context, item, isHovered) {
           return Align(
             alignment: Alignment.centerLeft,
             child: StatusBadge(
@@ -219,6 +220,15 @@ class TaskList extends StatelessWidget {
               label: item.status.name.toUpperCase(),
             ),
           );
+        },
+      ),
+      WsTableColumn(
+        title: 'Actions',
+        alignment: Alignment.centerRight,
+
+        flex: 1,
+        builder: (context, item, isHovered) {
+          return TaskActionsCell(task: item, isHovered: isHovered);
         },
       ),
     ];

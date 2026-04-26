@@ -9,6 +9,7 @@ import 'package:worklog_studio/state/project_task_state.dart';
 import 'package:worklog_studio/feature/common/presentation/drawer_controller_state.dart';
 import 'components/time_entry_card.dart';
 import 'components/time_entry_drawer.dart';
+import 'components/time_entry_actions_cell.dart';
 
 enum HistoryViewMode { cards, table }
 
@@ -273,7 +274,7 @@ class TimeEntryList extends StatelessWidget {
       WsTableColumn(
         title: 'Task & Project',
         flex: 3,
-        builder: (context, item) {
+        builder: (context, item, isHovered) {
           final palette = theme.colorsPalette;
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -299,7 +300,7 @@ class TimeEntryList extends StatelessWidget {
       WsTableColumn(
         title: 'Duration',
         flex: 2,
-        builder: (context, item) {
+        builder: (context, item, isHovered) {
           final palette = theme.colorsPalette;
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -326,7 +327,7 @@ class TimeEntryList extends StatelessWidget {
       WsTableColumn(
         title: 'Efficiency',
         flex: 1,
-        builder: (context, item) {
+        builder: (context, item, isHovered) {
           final palette = theme.colorsPalette;
           return Text(
             '94%',
@@ -339,7 +340,7 @@ class TimeEntryList extends StatelessWidget {
       WsTableColumn(
         title: 'Status',
         flex: 1,
-        builder: (context, item) {
+        builder: (context, item, isHovered) {
           if (item.isRunning) {
             return const Align(
               alignment: Alignment.centerLeft,
@@ -357,9 +358,13 @@ class TimeEntryList extends StatelessWidget {
       ),
       WsTableColumn(
         title: 'Actions',
+        alignment: Alignment.centerRight,
         flex: 1,
-        builder: (context, item) {
-          return const SizedBox.shrink();
+        builder: (context, item, isHovered) {
+          return TimeEntryActionsCell(
+            resolvedEntry: item,
+            isHovered: isHovered,
+          );
         },
       ),
     ];
