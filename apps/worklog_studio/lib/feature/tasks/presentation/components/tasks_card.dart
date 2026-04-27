@@ -68,37 +68,56 @@ class TaskCard extends StatelessWidget {
                 )
               : theme.commonTextStyles.h3,
         ),
-        subtitle: Row(
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: theme.spacings.s8,
-                vertical: theme.spacings.s2,
-              ),
-              decoration: BoxDecoration(
-                color: _getStatusColor(
-                  task.status,
-                  palette,
-                ).withValues(alpha: 0.1),
-                borderRadius: theme.radiuses.sm.circular,
-              ),
-              child: Text(
-                _getStatusText(task.status),
-                style: theme.commonTextStyles.caption3Bold.copyWith(
-                  color: _getStatusColor(task.status, palette),
-                  letterSpacing: 0.5,
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: theme.spacings.s8,
+                    vertical: theme.spacings.s2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(
+                      task.status,
+                      palette,
+                    ).withValues(alpha: 0.1),
+                    borderRadius: theme.radiuses.sm.circular,
+                  ),
+                  child: Text(
+                    _getStatusText(task.status),
+                    style: theme.commonTextStyles.caption3Bold.copyWith(
+                      color: _getStatusColor(task.status, palette),
+                      letterSpacing: 0.5,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            SizedBox(width: theme.spacings.s8),
-            Text(
-              task.projectName,
-              style: theme.commonTextStyles.caption.copyWith(
-                color: palette.text.secondary,
-              ),
+                SizedBox(width: theme.spacings.s8),
+                Text(
+                  task.projectName,
+                  style: theme.commonTextStyles.caption.copyWith(
+                    color: palette.text.secondary,
+                  ),
+                ),
+              ],
             ),
           ],
+        ),
+        description: Text(
+          task.description.isEmpty ? 'No description' : task.description,
+          style: task.status == TaskStatus.done
+              ? theme.commonTextStyles.caption.copyWith(
+                  decoration: TextDecoration.lineThrough,
+                  color: palette.text.secondary.withValues(alpha: 0.5),
+                )
+              : theme.commonTextStyles.caption.copyWith(
+                  color: task.description.isEmpty
+                      ? palette.text.secondary.withValues(alpha: 0.5)
+                      : palette.text.secondary,
+                ),
         ),
         trailing: Icon(trailingIcon, color: trailingIconColor, size: 24),
       ),

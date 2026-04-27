@@ -172,7 +172,7 @@ class TaskList extends StatelessWidget {
   List<WsTableColumn<ResolvedTask>> _getTableColumns(AppThemeExtension theme) {
     return [
       WsTableColumn(
-        title: 'Task Name',
+        title: 'Task & Project',
         flex: 3,
         builder: (context, item, isHovered) {
           final palette = theme.colorsPalette;
@@ -195,6 +195,25 @@ class TaskList extends StatelessWidget {
                   ),
                 ),
             ],
+          );
+        },
+      ),
+      WsTableColumn(
+        title: 'Description',
+        flex: 3,
+        builder: (context, item, isHovered) {
+          final palette = theme.colorsPalette;
+          return Text(
+            item.task.description.isEmpty
+                ? 'No description'
+                : item.task.description,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: theme.commonTextStyles.body2.copyWith(
+              color: item.task.description.isEmpty
+                  ? palette.text.secondary.withValues(alpha: 0.5)
+                  : palette.text.secondary,
+            ),
           );
         },
       ),

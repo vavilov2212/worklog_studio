@@ -298,6 +298,36 @@ class TimeEntryList extends StatelessWidget {
         },
       ),
       WsTableColumn(
+        title: 'Comment',
+        flex: 3,
+        builder: (context, item, isHovered) {
+          final palette = theme.colorsPalette;
+          if (item.entry.comment?.isNotEmpty == true) {
+            return Text(
+              item.entry.comment?.isEmpty == true
+                  ? 'No comment'
+                  : item.entry.comment!,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: theme.commonTextStyles.body2.copyWith(
+                color: item.entry.comment?.isEmpty == true
+                    ? palette.text.secondary.withValues(alpha: 0.5)
+                    : palette.text.secondary,
+              ),
+            );
+          } else {
+            return Text(
+              'No comment',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: theme.commonTextStyles.body2.copyWith(
+                color: palette.text.secondary.withValues(alpha: 0.5),
+              ),
+            );
+          }
+        },
+      ),
+      WsTableColumn(
         title: 'Duration',
         flex: 2,
         builder: (context, item, isHovered) {

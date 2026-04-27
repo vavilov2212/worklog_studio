@@ -180,7 +180,7 @@ class ProjectList extends StatelessWidget {
   ) {
     return [
       WsTableColumn(
-        title: 'Project Name',
+        title: 'Project',
         flex: 3,
         builder: (context, item, isHovered) {
           final palette = theme.colorsPalette;
@@ -203,6 +203,25 @@ class ProjectList extends StatelessWidget {
                   ),
                 ),
             ],
+          );
+        },
+      ),
+      WsTableColumn(
+        title: 'Description',
+        flex: 3,
+        builder: (context, item, isHovered) {
+          final palette = theme.colorsPalette;
+          return Text(
+            item.project.description.isEmpty
+                ? 'No description'
+                : item.project.description,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: theme.commonTextStyles.body2.copyWith(
+              color: item.project.description.isEmpty
+                  ? palette.text.secondary.withValues(alpha: 0.5)
+                  : palette.text.secondary,
+            ),
           );
         },
       ),

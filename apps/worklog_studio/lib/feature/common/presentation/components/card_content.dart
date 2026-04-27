@@ -5,6 +5,7 @@ class CardContent extends StatelessWidget {
   final Widget? leading;
   final Widget title;
   final Widget? subtitle;
+  final Widget? description;
   final Widget? trailing;
   final Widget? bottom;
 
@@ -13,6 +14,7 @@ class CardContent extends StatelessWidget {
     this.leading,
     required this.title,
     this.subtitle,
+    this.description,
     this.trailing,
     this.bottom,
   });
@@ -26,7 +28,7 @@ class CardContent extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (leading != null) ...[
               leading!,
@@ -41,6 +43,23 @@ class CardContent extends StatelessWidget {
                   if (subtitle != null) ...[
                     SizedBox(height: theme.spacings.s4),
                     subtitle!,
+                  ],
+                ],
+              ),
+            ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.start,
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  if (description != null) ...[
+                    Row(
+                      children: [
+                        SizedBox(height: theme.spacings.s4),
+                        description!,
+                      ],
+                    ),
                   ],
                 ],
               ),

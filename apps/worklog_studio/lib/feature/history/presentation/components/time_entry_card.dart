@@ -34,10 +34,32 @@ class TimeEntryCard extends StatelessWidget {
           ),
         ),
         title: Text(resolvedEntry.taskTitle, style: theme.commonTextStyles.h3),
-        subtitle: Text(
-          resolvedEntry.projectName,
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              resolvedEntry.projectName,
+              style: theme.commonTextStyles.caption.copyWith(
+                color: palette.text.secondary,
+              ),
+            ),
+          ],
+        ),
+
+        description: Text(
+          (resolvedEntry.entry.comment?.isEmpty == null ||
+                  resolvedEntry.entry.comment?.isEmpty == true)
+              ? 'No comment'
+              : resolvedEntry.entry.comment!,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
           style: theme.commonTextStyles.caption.copyWith(
-            color: palette.text.secondary,
+            color:
+                (resolvedEntry.entry.comment?.isEmpty == null ||
+                    resolvedEntry.entry.comment?.isEmpty == true)
+                ? palette.text.secondary.withValues(alpha: 0.5)
+                : palette.text.secondary,
           ),
         ),
         trailing: Column(

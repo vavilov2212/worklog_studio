@@ -55,6 +55,19 @@ class ProjectCard extends StatelessWidget {
             ),
           ],
         ),
+        description: Text(
+          project.description.isEmpty ? 'No description' : project.description,
+          style: project.status == ProjectStatus.done
+              ? theme.commonTextStyles.caption.copyWith(
+                  decoration: TextDecoration.lineThrough,
+                  color: palette.text.secondary.withValues(alpha: 0.5),
+                )
+              : theme.commonTextStyles.caption.copyWith(
+                  color: project.description.isEmpty
+                      ? palette.text.secondary.withValues(alpha: 0.5)
+                      : palette.text.secondary,
+                ),
+        ),
         trailing: Text(
           getStatusText(project.status),
           style: theme.commonTextStyles.caption3Bold.copyWith(
