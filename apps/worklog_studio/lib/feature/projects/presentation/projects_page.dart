@@ -8,6 +8,8 @@ import 'package:worklog_studio/state/entity_resolver.dart';
 import 'components/project_card.dart';
 import 'components/project_drawer.dart';
 import 'package:worklog_studio/feature/common/presentation/drawer_controller_state.dart';
+import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
+import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
 import 'components/project_actions_cell.dart';
 
 enum ProjectViewMode { cards, table }
@@ -184,24 +186,39 @@ class ProjectList extends StatelessWidget {
         flex: 3,
         builder: (context, item, isHovered) {
           final palette = theme.colorsPalette;
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+          final initials = BadgeUtils.getProjectInitials(item.name);
+          final colors = BadgeUtils.getBadgeColor(item.id);
+
+          return Row(
             children: [
-              Text(
-                item.name,
-                style: theme.commonTextStyles.bodyBold.copyWith(
-                  overflow: TextOverflow.ellipsis,
+              WsInitialBadge(
+                initials: initials,
+                backgroundColor: colors.$1,
+                textColor: colors.$2,
+              ),
+              SizedBox(width: theme.spacings.s12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      item.name,
+                      style: theme.commonTextStyles.bodyBold.copyWith(
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (item.project.clientName.isNotEmpty)
+                      Text(
+                        item.project.clientName,
+                        style: theme.commonTextStyles.caption.copyWith(
+                          color: palette.text.secondary,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                  ],
                 ),
               ),
-              if (item.project.clientName.isNotEmpty)
-                Text(
-                  item.project.clientName,
-                  style: theme.commonTextStyles.caption.copyWith(
-                    color: palette.text.secondary,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
             ],
           );
         },

@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart' hide DrawerHeader;
 import 'package:provider/provider.dart';
 import 'package:worklog_studio/feature/common/presentation/components/drawer_content.dart';
@@ -12,6 +13,9 @@ import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/feature/common/presentation/components/entity_meta_info_row.dart';
 import 'package:worklog_studio/domain/resolved_time_entry.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
+import 'package:worklog_studio/domain/project.dart';
+import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
+import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
 
 class TimeEntryDrawer extends StatefulWidget {
   final ResolvedTimeEntry? resolvedEntry;
@@ -264,10 +268,27 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                 .where((p) => p.id == _draft.projectId)
                                 .firstOrNull;
 
+                            Widget? leadingProjectWidget;
+                            if (selectedProject != null) {
+                              final initials = BadgeUtils.getProjectInitials(
+                                selectedProject.name,
+                              );
+                              final colors = BadgeUtils.getBadgeColor(
+                                selectedProject.id,
+                              );
+                              leadingProjectWidget = WsInitialBadge(
+                                initials: initials,
+                                backgroundColor: colors.$1,
+                                textColor: colors.$2,
+                                size: WsInitialBadgeSize.small,
+                              );
+                            }
+
                             return InlineField(
                               label: 'PROJECT',
                               value: selectedProject?.name ?? '',
                               placeholder: 'Select Project',
+                              leading: leadingProjectWidget,
                               controller: _projectFieldController,
                               editWidget: Select<String>(
                                 autoOpen: true,
@@ -335,9 +356,18 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                   );
                                 },
                                 options: state.projects.map((p) {
+                                  final initials =
+                                      BadgeUtils.getProjectInitials(p.name);
+                                  final colors = BadgeUtils.getBadgeColor(p.id);
                                   return SelectOption(
                                     value: p.id,
                                     label: p.name,
+                                    leading: WsInitialBadge(
+                                      initials: initials,
+                                      backgroundColor: colors.$1,
+                                      textColor: colors.$2,
+                                      size: WsInitialBadgeSize.small,
+                                    ),
                                   );
                                 }).toList(),
                               ),
@@ -352,10 +382,31 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                 .where((t) => t.id == _draft.taskId)
                                 .firstOrNull;
 
+                            Widget? leadingTaskWidget;
+                            if (selectedTask != null) {
+                              final project = state.projects.firstWhereOrNull(
+                                (p) => p.id == selectedTask.projectId,
+                              );
+                              final initials = BadgeUtils.getTaskInitials(
+                                selectedTask.title,
+                                project?.name ?? '',
+                              );
+                              final colors = BadgeUtils.getBadgeColor(
+                                selectedTask.id,
+                              );
+                              leadingTaskWidget = WsInitialBadge(
+                                initials: initials,
+                                backgroundColor: colors.$1,
+                                textColor: colors.$2,
+                                size: WsInitialBadgeSize.small,
+                              );
+                            }
+
                             return InlineField(
                               label: 'TASK',
                               value: selectedTask?.title ?? '',
                               placeholder: 'Select Task',
+                              leading: leadingTaskWidget,
                               controller: _taskFieldController,
                               editWidget: Select<String>(
                                 autoOpen: true,
@@ -424,9 +475,26 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                       (t) => t.projectId == _draft.projectId,
                                     )
                                     .map((t) {
+                                      final project = state.projects.firstWhere(
+                                        (p) => p.id == t.projectId,
+                                      );
+                                      final initials =
+                                          BadgeUtils.getTaskInitials(
+                                            t.title,
+                                            project.name,
+                                          );
+                                      final colors = BadgeUtils.getBadgeColor(
+                                        t.id,
+                                      );
                                       return SelectOption(
                                         value: t.id,
                                         label: t.title,
+                                        leading: WsInitialBadge(
+                                          initials: initials,
+                                          backgroundColor: colors.$1,
+                                          textColor: colors.$2,
+                                          size: WsInitialBadgeSize.small,
+                                        ),
                                       );
                                     })
                                     .toList(),

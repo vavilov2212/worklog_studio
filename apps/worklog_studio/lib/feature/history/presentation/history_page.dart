@@ -7,6 +7,8 @@ import 'package:worklog_studio/domain/resolved_time_entry.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
 import 'package:worklog_studio/feature/common/presentation/drawer_controller_state.dart';
+import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
+import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
 import 'components/time_entry_card.dart';
 import 'components/time_entry_drawer.dart';
 import 'components/time_entry_actions_cell.dart';
@@ -177,28 +179,48 @@ class TimeEntryList extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Padding(
-                          padding: EdgeInsets.only(
-                            bottom: theme.spacings.s16,
-                            top: theme.spacings.s16,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                _formatDateHeader(date),
-                                style: theme.commonTextStyles.captionBold
-                                    .copyWith(
-                                      color: palette.text.secondary,
-                                      letterSpacing: 1.0,
-                                    ),
-                              ),
-                              Text(
-                                'Total: ${_formatDuration(totalDuration)}',
-                                style: theme.commonTextStyles.bodyBold.copyWith(
-                                  color: palette.text.secondary,
+                          padding: EdgeInsets.all(theme.spacings.s16),
+                          child: Container(
+                            // decoration: BoxDecoration(color: Colors.green),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Container(
+                                  // decoration: BoxDecoration(
+                                  //   color: Colors.amber,
+                                  // ),
+                                  child: Text(
+                                    _formatDateHeader(date),
+                                    style: theme.commonTextStyles.captionBold
+                                        .copyWith(
+                                          letterSpacing: 1.0,
+                                          color: palette.text.secondary,
+                                        ),
+                                  ),
                                 ),
-                              ),
-                            ],
+                                SizedBox(width: theme.spacings.s8),
+                                Icon(
+                                  Icons.history_outlined,
+                                  color: palette.text.secondary2.withValues(
+                                    alpha: 0.8,
+                                  ),
+                                  size: 16,
+                                ),
+                                SizedBox(width: theme.spacings.s4),
+                                Container(
+                                  // decoration: BoxDecoration(color: Colors.red),
+                                  child: Text(
+                                    _formatDuration(totalDuration),
+                                    style: theme.commonTextStyles.body2
+                                        .copyWith(
+                                          letterSpacing: 1.0,
+                                          color: palette.text.secondary2
+                                              .withValues(alpha: 0.8),
+                                        ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                         if (viewMode == HistoryViewMode.cards)
@@ -230,7 +252,7 @@ class TimeEntryList extends StatelessWidget {
                         SizedBox(height: theme.spacings.s24),
                       ],
                     );
-                  }).toList(),
+                  }),
                   // Footer
                   if (entries.isNotEmpty)
                     Container(
@@ -276,27 +298,74 @@ class TimeEntryList extends StatelessWidget {
         flex: 3,
         builder: (context, item, isHovered) {
           final palette = theme.colorsPalette;
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+          final initials = BadgeUtils.getTaskInitials(
+            item.taskTitle,
+            item.projectName,
+          );
+          final id = item.task?.id ?? item.project?.id ?? item.id;
+          final colors = BadgeUtils.getBadgeColor(id);
+
+          return Row(
             children: [
-              Text(
-                item.taskTitle,
-                style: theme.commonTextStyles.bodyBold.copyWith(
-                  overflow: TextOverflow.ellipsis,
-                ),
+              WsInitialBadge(
+                initials: initials,
+                backgroundColor: colors.$1,
+                textColor: colors.$2,
               ),
-              Text(
-                item.projectName,
-                style: theme.commonTextStyles.caption.copyWith(
-                  color: palette.text.secondary,
-                  overflow: TextOverflow.ellipsis,
+              SizedBox(width: theme.spacings.s12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      item.taskTitle,
+                      style: theme.commonTextStyles.bodyBold.copyWith(
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Text(
+                      item.projectName,
+                      style: theme.commonTextStyles.caption.copyWith(
+                        color: palette.text.secondary,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           );
         },
       ),
+      WsTableColumn(
+        title: 'Duration',
+        flex: 2,
+        builder: (context, item, isHovered) {
+          final palette = theme.colorsPalette;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _formatExactDuration(item.duration(DateTime.now())),
+                style: theme.commonTextStyles.bodyBold.copyWith(
+                  color: item.isRunning
+                      ? palette.accent.primary
+                      : palette.text.primary,
+                ),
+              ),
+              Text(
+                _formatTimeRange(item.startAt, item.endAt),
+                style: theme.commonTextStyles.caption.copyWith(
+                  color: palette.text.secondary,
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+
       WsTableColumn(
         title: 'Comment',
         flex: 3,
@@ -325,33 +394,6 @@ class TimeEntryList extends StatelessWidget {
               ),
             );
           }
-        },
-      ),
-      WsTableColumn(
-        title: 'Duration',
-        flex: 2,
-        builder: (context, item, isHovered) {
-          final palette = theme.colorsPalette;
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                _formatExactDuration(item.duration(DateTime.now())),
-                style: theme.commonTextStyles.bodyBold.copyWith(
-                  color: item.isRunning
-                      ? palette.accent.primary
-                      : palette.text.primary,
-                ),
-              ),
-              Text(
-                _formatTimeRange(item.startAt, item.endAt),
-                style: theme.commonTextStyles.caption.copyWith(
-                  color: palette.text.secondary,
-                ),
-              ),
-            ],
-          );
         },
       ),
       WsTableColumn(

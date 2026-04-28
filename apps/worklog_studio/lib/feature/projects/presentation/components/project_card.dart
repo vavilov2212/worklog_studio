@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/domain/resolved_project.dart';
 import 'package:worklog_studio/feature/common/presentation/interactive_card.dart';
-import 'package:worklog_studio/feature/common/presentation/components/card_content.dart';
+import 'package:worklog_studio/feature/common/presentation/components/card_row.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
+import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
+import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
 
 class ProjectCard extends StatelessWidget {
   final ResolvedProject project;
@@ -25,56 +27,91 @@ class ProjectCard extends StatelessWidget {
     return InteractiveCard(
       isSelected: isSelected,
       onTap: onTap,
-      child: CardContent(
-        leading: Container(
-          width: 4,
-          height: 40,
-          decoration: BoxDecoration(
-            color: palette.accent.primary,
-            borderRadius: theme.radiuses.pill.circular,
+      child: CardRow(
+        columns: [
+          CardColumn(
+            flex: 3,
+            child: Row(
+              children: [
+                Builder(
+                  builder: (context) {
+                    final initials = BadgeUtils.getProjectInitials(
+                      project.name,
+                    );
+                    final colors = BadgeUtils.getBadgeColor(project.id);
+                    return WsInitialBadge(
+                      initials: initials,
+                      backgroundColor: colors.$1,
+                      textColor: colors.$2,
+                    );
+                  },
+                ),
+                SizedBox(width: theme.spacings.s12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        project.name,
+                        style: theme.commonTextStyles.bodyBold.copyWith(
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (project.project.clientName.isNotEmpty)
+                        Text(
+                          project.project.clientName,
+                          style: theme.commonTextStyles.caption.copyWith(
+                            color: palette.text.secondary,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      SizedBox(height: theme.spacings.s8),
+                      LinearProgressIndicator(
+                        value: project.project.budgetUtilization,
+                        backgroundColor: palette.border.primary,
+                        color: palette.accent.primary,
+                        minHeight: 4,
+                        borderRadius: theme.radiuses.pill.circular,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        title: Text(project.name, style: theme.commonTextStyles.h3),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              project.project.clientName,
-              style: theme.commonTextStyles.caption.copyWith(
-                color: palette.text.secondary,
+          CardColumn(
+            flex: 4,
+            child: Text(
+              project.description.isEmpty
+                  ? 'No description'
+                  : project.description,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: project.status == ProjectStatus.done
+                  ? theme.commonTextStyles.caption.copyWith(
+                      decoration: TextDecoration.lineThrough,
+                      color: palette.text.secondary.withValues(alpha: 0.5),
+                    )
+                  : theme.commonTextStyles.caption.copyWith(
+                      color: project.description.isEmpty
+                          ? palette.text.secondary.withValues(alpha: 0.5)
+                          : palette.text.secondary,
+                    ),
+            ),
+          ),
+          CardColumn(
+            flex: 1,
+            alignment: Alignment.centerRight,
+            child: Text(
+              getStatusText(project.status),
+              style: theme.commonTextStyles.caption3Bold.copyWith(
+                color: palette.text.muted,
+                letterSpacing: 1.0,
               ),
             ),
-            SizedBox(height: theme.spacings.s8),
-            LinearProgressIndicator(
-              value: project.project.budgetUtilization,
-              backgroundColor: palette.border.primary,
-              color: palette.accent.primary,
-              minHeight: 4,
-              borderRadius: theme.radiuses.pill.circular,
-            ),
-          ],
-        ),
-        description: Text(
-          project.description.isEmpty ? 'No description' : project.description,
-          style: project.status == ProjectStatus.done
-              ? theme.commonTextStyles.caption.copyWith(
-                  decoration: TextDecoration.lineThrough,
-                  color: palette.text.secondary.withValues(alpha: 0.5),
-                )
-              : theme.commonTextStyles.caption.copyWith(
-                  color: project.description.isEmpty
-                      ? palette.text.secondary.withValues(alpha: 0.5)
-                      : palette.text.secondary,
-                ),
-        ),
-        trailing: Text(
-          getStatusText(project.status),
-          style: theme.commonTextStyles.caption3Bold.copyWith(
-            color: palette.text.muted,
-            letterSpacing: 1.0,
           ),
-        ),
+        ],
       ),
     );
   }

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:worklog_studio/feature/common/presentation/components/card_content.dart';
+import 'package:worklog_studio/feature/common/presentation/components/card_row.dart';
 import 'package:worklog_studio/feature/common/presentation/interactive_card.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/domain/resolved_time_entry.dart';
+import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
+import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
 
 class TimeEntryCard extends StatelessWidget {
   final ResolvedTimeEntry resolvedEntry;
@@ -24,66 +26,100 @@ class TimeEntryCard extends StatelessWidget {
     return InteractiveCard(
       isSelected: isSelected,
       onTap: onTap,
-      child: CardContent(
-        leading: Container(
-          width: 4,
-          height: 40,
-          decoration: BoxDecoration(
-            color: palette.accent.primary,
-            borderRadius: theme.radiuses.pill.circular,
+      child: CardRow(
+        columns: [
+          CardColumn(
+            flex: 3,
+            child: Row(
+              children: [
+                Builder(
+                  builder: (context) {
+                    final initials = BadgeUtils.getTaskInitials(
+                      resolvedEntry.taskTitle,
+                      resolvedEntry.projectName,
+                    );
+                    final id =
+                        resolvedEntry.task?.id ??
+                        resolvedEntry.project?.id ??
+                        resolvedEntry.id;
+                    final colors = BadgeUtils.getBadgeColor(id);
+                    return WsInitialBadge(
+                      initials: initials,
+                      backgroundColor: colors.$1,
+                      textColor: colors.$2,
+                    );
+                  },
+                ),
+                SizedBox(width: theme.spacings.s12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        resolvedEntry.taskTitle,
+                        style: theme.commonTextStyles.bodyBold.copyWith(
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Text(
+                        resolvedEntry.projectName,
+                        style: theme.commonTextStyles.caption.copyWith(
+                          color: palette.text.secondary,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        title: Text(resolvedEntry.taskTitle, style: theme.commonTextStyles.h3),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              resolvedEntry.projectName,
-              style: theme.commonTextStyles.caption.copyWith(
-                color: palette.text.secondary,
-              ),
+          CardColumn(
+            flex: 2,
+            alignment: Alignment.centerRight,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _formatDuration(resolvedEntry.duration(DateTime.now())),
+                  style: theme.commonTextStyles.bodyBold.copyWith(
+                    color: resolvedEntry.isRunning
+                        ? palette.accent.primary
+                        : palette.text.primary,
+                    fontSize: 16,
+                  ),
+                ),
+                SizedBox(height: theme.spacings.s4),
+                Text(
+                  _formatTimeRange(resolvedEntry.startAt, resolvedEntry.endAt),
+                  style: theme.commonTextStyles.caption.copyWith(
+                    color: palette.text.secondary,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-
-        description: Text(
-          (resolvedEntry.entry.comment?.isEmpty == null ||
-                  resolvedEntry.entry.comment?.isEmpty == true)
-              ? 'No comment'
-              : resolvedEntry.entry.comment!,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: theme.commonTextStyles.caption.copyWith(
-            color:
-                (resolvedEntry.entry.comment?.isEmpty == null ||
-                    resolvedEntry.entry.comment?.isEmpty == true)
-                ? palette.text.secondary.withValues(alpha: 0.5)
-                : palette.text.secondary,
           ),
-        ),
-        trailing: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              _formatDuration(resolvedEntry.duration(DateTime.now())),
-              style: theme.commonTextStyles.bodyBold.copyWith(
-                color: resolvedEntry.isRunning
-                    ? palette.accent.primary
-                    : palette.text.primary,
-                fontSize: 16,
-              ),
-            ),
-            SizedBox(height: theme.spacings.s4),
-            Text(
-              _formatTimeRange(resolvedEntry.startAt, resolvedEntry.endAt),
+          CardColumn(
+            flex: 3,
+            child: Text(
+              (resolvedEntry.entry.comment?.isEmpty == null ||
+                      resolvedEntry.entry.comment?.isEmpty == true)
+                  ? 'No comment'
+                  : resolvedEntry.entry.comment!,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: theme.commonTextStyles.caption.copyWith(
-                color: palette.text.secondary,
+                color:
+                    (resolvedEntry.entry.comment?.isEmpty == null ||
+                        resolvedEntry.entry.comment?.isEmpty == true)
+                    ? palette.text.secondary.withValues(alpha: 0.5)
+                    : palette.text.secondary,
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

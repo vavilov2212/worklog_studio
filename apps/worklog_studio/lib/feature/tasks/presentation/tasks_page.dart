@@ -8,6 +8,8 @@ import 'package:worklog_studio/state/entity_resolver.dart';
 import 'components/tasks_card.dart';
 import 'components/tasks_drawer.dart';
 import 'package:worklog_studio/feature/common/presentation/drawer_controller_state.dart';
+import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
+import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
 import 'components/task_actions_cell.dart';
 
 enum TaskViewMode { cards, table }
@@ -176,24 +178,42 @@ class TaskList extends StatelessWidget {
         flex: 3,
         builder: (context, item, isHovered) {
           final palette = theme.colorsPalette;
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+          final initials = BadgeUtils.getTaskInitials(
+            item.title,
+            item.projectName,
+          );
+          final colors = BadgeUtils.getBadgeColor(item.id);
+
+          return Row(
             children: [
-              Text(
-                item.title,
-                style: theme.commonTextStyles.bodyBold.copyWith(
-                  overflow: TextOverflow.ellipsis,
+              WsInitialBadge(
+                initials: initials,
+                backgroundColor: colors.$1,
+                textColor: colors.$2,
+              ),
+              SizedBox(width: theme.spacings.s12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      item.title,
+                      style: theme.commonTextStyles.bodyBold.copyWith(
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (item.projectName.isNotEmpty)
+                      Text(
+                        item.projectName,
+                        style: theme.commonTextStyles.caption.copyWith(
+                          color: palette.text.secondary,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                  ],
                 ),
               ),
-              if (item.projectName.isNotEmpty)
-                Text(
-                  item.projectName,
-                  style: theme.commonTextStyles.caption.copyWith(
-                    color: palette.text.secondary,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
             ],
           );
         },

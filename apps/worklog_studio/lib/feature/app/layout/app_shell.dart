@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/domain/task.dart';
@@ -15,6 +16,8 @@ import 'package:worklog_studio/state/project_task_state.dart';
 import 'package:worklog_studio/feature/common/presentation/components/inline_field.dart';
 import 'package:worklog_studio/feature/common/presentation/components/inline_field_controller.dart';
 
+import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
+import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
 import 'package:worklog_studio/core/services/desktop/desktop_service.dart';
 import 'dart:async';
 
@@ -362,18 +365,42 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
       (s) => s.projects,
     );
 
-    final options = projects
-        .map((p) => SelectOption(value: p.id, label: p.name))
-        .toList();
+    final options = projects.map((p) {
+      final initials = BadgeUtils.getProjectInitials(p.name);
+      final colors = BadgeUtils.getBadgeColor(p.id);
+      return SelectOption(
+        value: p.id,
+        label: p.name,
+        leading: WsInitialBadge(
+          initials: initials,
+          backgroundColor: colors.$1,
+          textColor: colors.$2,
+          size: WsInitialBadgeSize.small,
+        ),
+      );
+    }).toList();
 
     final selectedProject = projects
         .where((p) => p.id == selectedId)
         .firstOrNull;
 
+    Widget? leadingWidget;
+    if (selectedProject != null) {
+      final initials = BadgeUtils.getProjectInitials(selectedProject.name);
+      final colors = BadgeUtils.getBadgeColor(selectedProject.id);
+      leadingWidget = WsInitialBadge(
+        initials: initials,
+        backgroundColor: colors.$1,
+        textColor: colors.$2,
+        size: WsInitialBadgeSize.small,
+      );
+    }
+
     return InlineField(
       label: 'PROJECT',
       value: selectedProject?.name ?? '',
       placeholder: 'Select Project',
+      leading: leadingWidget,
       controller: _projectFieldController,
       editWidget: Select<String>(
         value: selectedId,
@@ -444,18 +471,51 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
         ? tasks.where((t) => t.projectId == draftProjectId).toList()
         : tasks;
 
-    final options = filteredTasks
-        .map((t) => SelectOption(value: t.id, label: t.title))
-        .toList();
+    final options = filteredTasks.map((t) {
+      final project = projectTaskState.projects.firstWhereOrNull(
+        (p) => p.id == t.projectId,
+      );
+      final initials = BadgeUtils.getTaskInitials(t.title, project?.name ?? '');
+      final colors = BadgeUtils.getBadgeColor(t.id);
+      return SelectOption(
+        value: t.id,
+        label: t.title,
+        leading: WsInitialBadge(
+          initials: initials,
+          backgroundColor: colors.$1,
+          textColor: colors.$2,
+          size: WsInitialBadgeSize.small,
+        ),
+      );
+    }).toList();
 
     final selectedTask = filteredTasks
         .where((t) => t.id == selectedId)
         .firstOrNull;
 
+    Widget? leadingWidget;
+    if (selectedTask != null) {
+      final project = projectTaskState.projects.firstWhere(
+        (p) => p.id == selectedTask.projectId,
+      );
+      final initials = BadgeUtils.getTaskInitials(
+        selectedTask.title,
+        project.name,
+      );
+      final colors = BadgeUtils.getBadgeColor(selectedTask.id);
+      leadingWidget = WsInitialBadge(
+        initials: initials,
+        backgroundColor: colors.$1,
+        textColor: colors.$2,
+        size: WsInitialBadgeSize.small,
+      );
+    }
+
     return InlineField(
       label: 'TASK',
       value: selectedTask?.title ?? '',
       placeholder: 'Select Task',
+      leading: leadingWidget,
       controller: _taskFieldController,
       editWidget: Select<String>(
         value: selectedId,

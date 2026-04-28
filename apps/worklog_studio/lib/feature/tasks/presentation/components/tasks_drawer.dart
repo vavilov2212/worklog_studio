@@ -9,6 +9,8 @@ import 'package:worklog_studio/feature/common/presentation/components/inline_fie
 import 'package:worklog_studio/state/project_task_state.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/feature/common/presentation/components/entity_meta_info_row.dart';
+import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
+import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
 
 class TaskDrawer extends StatefulWidget {
   final Task? task;
@@ -268,10 +270,28 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                         .where((p) => p.id == _draft.projectId)
                                         .firstOrNull;
 
+                                    Widget? leadingProjectWidget;
+                                    if (selectedProject != null) {
+                                      final initials =
+                                          BadgeUtils.getProjectInitials(
+                                            selectedProject.name,
+                                          );
+                                      final colors = BadgeUtils.getBadgeColor(
+                                        selectedProject.id,
+                                      );
+                                      leadingProjectWidget = WsInitialBadge(
+                                        initials: initials,
+                                        backgroundColor: colors.$1,
+                                        textColor: colors.$2,
+                                        size: WsInitialBadgeSize.small,
+                                      );
+                                    }
+
                                     return InlineField(
                                       label: 'PROJECT',
                                       value: selectedProject?.name ?? '',
                                       placeholder: 'Select Project',
+                                      leading: leadingProjectWidget,
                                       controller: _projectFieldController,
                                       editWidget: Select<String>(
                                         autoOpen: true,
@@ -332,9 +352,21 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                           );
                                         },
                                         options: state.projects.map((p) {
+                                          final initials =
+                                              BadgeUtils.getProjectInitials(
+                                                p.name,
+                                              );
+                                          final colors =
+                                              BadgeUtils.getBadgeColor(p.id);
                                           return SelectOption(
                                             value: p.id,
                                             label: p.name,
+                                            leading: WsInitialBadge(
+                                              initials: initials,
+                                              backgroundColor: colors.$1,
+                                              textColor: colors.$2,
+                                              size: WsInitialBadgeSize.small,
+                                            ),
                                           );
                                         }).toList(),
                                       ),

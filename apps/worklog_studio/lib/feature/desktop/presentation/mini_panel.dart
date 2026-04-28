@@ -5,6 +5,8 @@ import 'package:worklog_studio/domain/time_entry.dart';
 import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/feature/desktop/presentation/mini_tracker_cubit.dart';
+import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
+import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:collection/collection.dart';
 import 'package:worklog_studio/core/services/desktop/desktop_service.dart';
@@ -199,7 +201,19 @@ class _MiniPanelState extends State<MiniPanel> {
       });
     }
 
+    final initials = BadgeUtils.getTaskInitials(
+      task.title,
+      project?.name ?? '',
+    );
+    final colors = BadgeUtils.getBadgeColor(task.id);
+
     return _HoverableListItem(
+      leading: WsInitialBadge(
+        initials: initials,
+        backgroundColor: colors.$1,
+        textColor: colors.$2,
+        size: WsInitialBadgeSize.small,
+      ),
       title: task.title,
       subtitle: project?.name,
       trailing: isActive
@@ -239,11 +253,15 @@ class _MiniPanelState extends State<MiniPanel> {
       DesktopService().openMainWindowFromTray(route: "projects");
     }
 
+    final initials = BadgeUtils.getProjectInitials(project.name);
+    final colors = BadgeUtils.getBadgeColor(project.id);
+
     return _HoverableListItem(
-      leading: Icon(
-        Icons.folder_outlined,
-        size: 18,
-        color: theme.colorsPalette.accent.primary,
+      leading: WsInitialBadge(
+        initials: initials,
+        backgroundColor: colors.$1,
+        textColor: colors.$2,
+        size: WsInitialBadgeSize.small,
       ),
       title: project.name,
       trailingWidget: (isHovered) => PrimaryButton(
@@ -278,6 +296,10 @@ class _MiniPanelState extends State<MiniPanel> {
         ? ((project != null ? '${project.name} • ' : '') + '$count entries')
         : project?.name;
 
+    final initials = BadgeUtils.getTaskInitials(title, project?.name ?? '');
+    final idForColor = task?.id ?? project?.id ?? entry.id;
+    final colors = BadgeUtils.getBadgeColor(idForColor);
+
     onTap() {
       context.read<MiniTrackerCubit>().startTimer(
         projectId: project?.id,
@@ -292,6 +314,12 @@ class _MiniPanelState extends State<MiniPanel> {
     }
 
     return _HoverableListItem(
+      leading: WsInitialBadge(
+        initials: initials,
+        backgroundColor: colors.$1,
+        textColor: colors.$2,
+        size: WsInitialBadgeSize.small,
+      ),
       title: title,
       subtitle: subtitleText,
       trailing: isActive
