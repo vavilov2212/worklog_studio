@@ -16,6 +16,7 @@ class PrimaryButton extends StatefulWidget {
   final AlignmentGeometry? alignment;
   final Color? backgroundColor;
   final Color? foregroundColor;
+  final Duration? initialAnimationDuration;
 
   const PrimaryButton({
     required this.onTap,
@@ -31,6 +32,7 @@ class PrimaryButton extends StatefulWidget {
     this.alignment,
     this.backgroundColor,
     this.foregroundColor,
+    this.initialAnimationDuration,
     super.key,
   });
 
@@ -208,7 +210,7 @@ class _PrimaryButtonState extends State<PrimaryButton> {
         onTapCancel: () => setState(() => isActive = false),
         onTapUp: (_) => setState(() => isActive = false),
         child: AnimatedContainer(
-          duration: kThemeAnimationDuration,
+          duration: widget.initialAnimationDuration ?? kThemeAnimationDuration,
           decoration: BoxDecoration(
             color: backgroundGradient == null ? backgroundColor : null,
             gradient: backgroundGradient,

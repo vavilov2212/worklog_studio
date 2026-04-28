@@ -1,11 +1,18 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide DrawerControllerState;
 import 'package:provider/provider.dart';
-import 'package:worklog_studio/feature/tasks/presentation/components/tasks_card.dart';
+import 'package:collection/collection.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/domain/resolved_task.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
+import 'components/tasks_card.dart';
 import 'components/tasks_drawer.dart';
+import 'package:worklog_studio/feature/common/presentation/drawer_controller_state.dart';
+import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
+import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
+import 'components/task_actions_cell.dart';
+
+enum TaskViewMode { cards, table }
 
 class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
@@ -15,34 +22,29 @@ class TasksScreen extends StatefulWidget {
 }
 
 class _TasksScreenState extends State<TasksScreen> {
-  Task? selectedTask;
+  DrawerControllerState<Task> _drawerState = DrawerControllerState.closed();
+  TaskViewMode _viewMode = TaskViewMode.table;
 
   void _handleTaskSelected(Task task) {
     setState(() {
-      if (selectedTask?.id == task.id) {
-        selectedTask = null; // Toggle off
+      if (_drawerState.state == DrawerState.edit &&
+          _drawerState.entity?.id == task.id) {
+        _drawerState = DrawerControllerState.closed();
       } else {
-        selectedTask = task;
+        _drawerState = DrawerControllerState.edit(task);
       }
     });
   }
 
   void _handleCreateTask() {
     setState(() {
-      selectedTask = Task(
-        id: '',
-        projectId: '',
-        title: '',
-        description: '',
-        status: TaskStatus.open,
-        createdAt: DateTime.now(),
-      );
+      _drawerState = DrawerControllerState.create();
     });
   }
 
   void _closePanel() {
     setState(() {
-      selectedTask = null;
+      _drawerState = DrawerControllerState.closed();
     });
   }
 
@@ -57,16 +59,17 @@ class _TasksScreenState extends State<TasksScreen> {
         Expanded(
           child: TaskList(
             tasks: resolvedTasks,
-            selectedTask: selectedTask,
+            selectedTask: _drawerState.entity,
             onTaskSelected: _handleTaskSelected,
             onCreateTask: _handleCreateTask,
+            viewMode: _viewMode,
+            onViewModeChanged: (mode) => setState(() => _viewMode = mode),
           ),
         ),
         TaskDrawer(
-          task: selectedTask,
-          isOpen: selectedTask != null,
+          task: _drawerState.entity,
+          isOpen: _drawerState.isOpen,
           onClose: _closePanel,
-          isNew: selectedTask != null && selectedTask!.id.isEmpty,
         ),
       ],
     );
@@ -78,6 +81,8 @@ class TaskList extends StatelessWidget {
   final Task? selectedTask;
   final ValueChanged<Task> onTaskSelected;
   final VoidCallback onCreateTask;
+  final TaskViewMode viewMode;
+  final ValueChanged<TaskViewMode> onViewModeChanged;
 
   const TaskList({
     super.key,
@@ -85,6 +90,8 @@ class TaskList extends StatelessWidget {
     required this.selectedTask,
     required this.onTaskSelected,
     required this.onCreateTask,
+    required this.viewMode,
+    required this.onViewModeChanged,
   });
 
   @override
@@ -92,7 +99,7 @@ class TaskList extends StatelessWidget {
     final theme = context.theme;
     final palette = theme.colorsPalette;
 
-    return SingleChildScrollView(
+    return Padding(
       padding: EdgeInsets.all(theme.spacings.s32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -116,27 +123,248 @@ class TaskList extends StatelessWidget {
                   ),
                 ],
               ),
-              PrimaryButton(
-                title: 'New Task',
-                leftIcon: WorklogStudioAssets.vectors.plus24Svg,
-                size: ButtonSize.md,
-                onTap: onCreateTask,
+              Row(
+                spacing: theme.spacings.s12,
+                children: [
+                  _TaskViewModeToggle(
+                    viewMode: viewMode,
+                    onChanged: onViewModeChanged,
+                  ),
+                  PrimaryButton(
+                    title: 'New Task',
+                    leftIcon: WorklogStudioAssets.vectors.plus24Svg,
+                    size: ButtonSize.md,
+                    onTap: onCreateTask,
+                  ),
+                ],
               ),
             ],
           ),
           SizedBox(height: theme.spacings.s32),
-          Column(
-            spacing: theme.spacings.s12,
-            children: tasks.map((task) {
-              final isSelected = selectedTask?.id == task.id;
-              return TaskCard(
-                task: task,
-                isSelected: isSelected,
-                onTap: () => onTaskSelected(task.task),
-              );
-            }).toList(),
+          Expanded(
+            child: SingleChildScrollView(
+              child: viewMode == TaskViewMode.table
+                  ? WsTable<ResolvedTask>(
+                      data: tasks,
+                      selectedItem: tasks.firstWhereOrNull(
+                        (e) => e.id == selectedTask?.id,
+                      ),
+                      onRowTap: (item) => onTaskSelected(item.task),
+                      isSelected: (item, selected) => item.id == selected?.id,
+                      columns: _getTableColumns(theme),
+                    )
+                  : Column(
+                      spacing: theme.spacings.s12,
+                      children: tasks.map((task) {
+                        final isSelected = selectedTask?.id == task.id;
+                        return TaskCard(
+                          task: task,
+                          isSelected: isSelected,
+                          onTap: () => onTaskSelected(task.task),
+                        );
+                      }).toList(),
+                    ),
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  List<WsTableColumn<ResolvedTask>> _getTableColumns(AppThemeExtension theme) {
+    return [
+      WsTableColumn(
+        title: 'Task & Project',
+        flex: 3,
+        builder: (context, item, isHovered) {
+          final palette = theme.colorsPalette;
+          final initials = BadgeUtils.getTaskInitials(
+            item.title,
+            item.projectName,
+          );
+          final colors = BadgeUtils.getBadgeColor(item.id);
+
+          return Row(
+            children: [
+              WsInitialBadge(
+                initials: initials,
+                backgroundColor: colors.$1,
+                textColor: colors.$2,
+              ),
+              SizedBox(width: theme.spacings.s12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      item.title,
+                      style: theme.commonTextStyles.bodyBold.copyWith(
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (item.projectName.isNotEmpty)
+                      Text(
+                        item.projectName,
+                        style: theme.commonTextStyles.caption.copyWith(
+                          color: palette.text.secondary,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+      WsTableColumn(
+        title: 'Description',
+        flex: 3,
+        builder: (context, item, isHovered) {
+          final palette = theme.colorsPalette;
+          return Text(
+            item.task.description.isEmpty
+                ? 'No description'
+                : item.task.description,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: theme.commonTextStyles.body2.copyWith(
+              color: item.task.description.isEmpty
+                  ? palette.text.secondary.withValues(alpha: 0.5)
+                  : palette.text.secondary,
+            ),
+          );
+        },
+      ),
+      WsTableColumn(
+        title: 'Time',
+        flex: 2,
+        builder: (context, item, isHovered) {
+          final duration = item.duration(DateTime.now());
+          return Text(
+            _formatExactDuration(duration),
+            style: theme.commonTextStyles.bodyBold,
+          );
+        },
+      ),
+      WsTableColumn(
+        title: 'Status',
+        flex: 1,
+        builder: (context, item, isHovered) {
+          return Align(
+            alignment: Alignment.centerLeft,
+            child: StatusBadge(
+              status: _getBadgeStatus(item.status),
+              label: item.status.name.toUpperCase(),
+            ),
+          );
+        },
+      ),
+      WsTableColumn(
+        title: 'Actions',
+        alignment: Alignment.centerRight,
+
+        flex: 1,
+        builder: (context, item, isHovered) {
+          return TaskActionsCell(task: item, isHovered: isHovered);
+        },
+      ),
+    ];
+  }
+
+  BadgeStatus _getBadgeStatus(TaskStatus status) {
+    switch (status) {
+      case TaskStatus.open:
+        return BadgeStatus.inProgress;
+      case TaskStatus.done:
+        return BadgeStatus.ready;
+      case TaskStatus.archived:
+        return BadgeStatus.done;
+    }
+  }
+
+  String _formatExactDuration(Duration duration) {
+    final hours = duration.inHours.toString().padLeft(2, '0');
+    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$hours:$minutes:$seconds';
+  }
+}
+
+class _TaskViewModeToggle extends StatelessWidget {
+  final TaskViewMode viewMode;
+  final ValueChanged<TaskViewMode> onChanged;
+
+  const _TaskViewModeToggle({required this.viewMode, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    final palette = theme.colorsPalette;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: palette.background.surface,
+        borderRadius: theme.radiuses.sm.circular,
+        border: Border.all(
+          color: palette.border.primary.withValues(alpha: 0.5),
+        ),
+      ),
+      padding: EdgeInsets.all(theme.spacings.s4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildToggleButton(
+            context,
+            icon: Icons.grid_view_rounded,
+            isSelected: viewMode == TaskViewMode.cards,
+            onTap: () => onChanged(TaskViewMode.cards),
+          ),
+          SizedBox(width: theme.spacings.s4),
+          _buildToggleButton(
+            context,
+            icon: Icons.table_rows_rounded,
+            isSelected: viewMode == TaskViewMode.table,
+            onTap: () => onChanged(TaskViewMode.table),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToggleButton(
+    BuildContext context, {
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    final theme = context.theme;
+    final palette = theme.colorsPalette;
+
+    return Material(
+      color: isSelected ? palette.background.surface : Colors.transparent,
+      borderRadius: theme.radiuses.sm.circular,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: EdgeInsets.all(theme.spacings.s8),
+          decoration: BoxDecoration(
+            border: isSelected
+                ? Border.all(
+                    color: palette.border.primary.withValues(alpha: 0.5),
+                  )
+                : Border.all(color: Colors.transparent),
+            borderRadius: theme.radiuses.sm.circular,
+            boxShadow: isSelected ? [theme.shadows.sm] : null,
+          ),
+          child: Icon(
+            icon,
+            size: 16,
+            color: isSelected ? palette.text.primary : palette.text.secondary,
+          ),
+        ),
       ),
     );
   }

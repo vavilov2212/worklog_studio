@@ -11,6 +11,9 @@ import 'package:worklog_studio/feature/time_tracker/presentation/components/acti
 import 'package:worklog_studio/state/project_task_state.dart';
 // import 'package:worklog_studio_style_system/ui_kit/src/select/index.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
+import 'package:worklog_studio/domain/project.dart';
+import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
+import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
 
 class WelcomeLayout extends StatefulWidget {
   const WelcomeLayout({super.key});
@@ -196,14 +199,29 @@ class WelcomeLayoutState extends State<WelcomeLayout> {
                                             searchable: true,
                                             placeholder: 'Select project',
                                             value: activeEntry?.projectId,
-                                            options: projectTaskState.projects
-                                                .map(
-                                                  (p) => SelectOption(
-                                                    value: p.id,
-                                                    label: p.name,
-                                                  ),
-                                                )
-                                                .toList(),
+                                            options: projectTaskState.projects.map((
+                                              p,
+                                            ) {
+                                              final initials =
+                                                  BadgeUtils.getProjectInitials(
+                                                    p.name,
+                                                  );
+                                              final colors =
+                                                  BadgeUtils.getBadgeColor(
+                                                    p.id,
+                                                  );
+                                              return SelectOption(
+                                                value: p.id,
+                                                label: p.name,
+                                                leading: WsInitialBadge(
+                                                  initials: initials,
+                                                  backgroundColor: colors.$1,
+                                                  textColor: colors.$2,
+                                                  size:
+                                                      WsInitialBadgeSize.small,
+                                                ),
+                                              );
+                                            }).toList(),
                                             actionBuilder: (context, query, close) {
                                               final exactMatchExists =
                                                   projectTaskState.projects.any(
@@ -255,14 +273,36 @@ class WelcomeLayoutState extends State<WelcomeLayout> {
                                             searchable: true,
                                             placeholder: 'Select task',
                                             value: activeEntry?.taskId,
-                                            options: projectTaskState.tasks
-                                                .map(
-                                                  (t) => SelectOption(
-                                                    value: t.id,
-                                                    label: t.title,
+                                            options: projectTaskState.tasks.map(
+                                              (t) {
+                                                final project = projectTaskState
+                                                    .projects
+                                                    .firstWhere(
+                                                      (p) =>
+                                                          p.id == t.projectId,
+                                                    );
+                                                final initials =
+                                                    BadgeUtils.getTaskInitials(
+                                                      t.title,
+                                                      project.name,
+                                                    );
+                                                final colors =
+                                                    BadgeUtils.getBadgeColor(
+                                                      t.id,
+                                                    );
+                                                return SelectOption(
+                                                  value: t.id,
+                                                  label: t.title,
+                                                  leading: WsInitialBadge(
+                                                    initials: initials,
+                                                    backgroundColor: colors.$1,
+                                                    textColor: colors.$2,
+                                                    size: WsInitialBadgeSize
+                                                        .small,
                                                   ),
-                                                )
-                                                .toList(),
+                                                );
+                                              },
+                                            ).toList(),
                                             actionBuilder: (context, query, close) {
                                               final exactMatchExists =
                                                   projectTaskState.tasks.any(

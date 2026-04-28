@@ -8,19 +8,20 @@ import 'package:worklog_studio/feature/common/presentation/resizable_drawer.dart
 import 'package:worklog_studio/feature/common/presentation/components/inline_field.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
+import 'package:worklog_studio/feature/common/presentation/components/entity_meta_info_row.dart';
+import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
+import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
 
 class TaskDrawer extends StatefulWidget {
   final Task? task;
   final bool isOpen;
   final VoidCallback onClose;
-  final bool isNew;
 
   const TaskDrawer({
     super.key,
     required this.task,
     required this.isOpen,
     required this.onClose,
-    required this.isNew,
   });
 
   @override
@@ -29,26 +30,39 @@ class TaskDrawer extends StatefulWidget {
 
 class _TaskDrawerState extends State<TaskDrawer> {
   bool _isConfirmingDelete = false;
+  late Task _draft;
   late TextEditingController _titleController;
   late TextEditingController _descriptionController;
   final InlineFieldController _titleFieldController = InlineFieldController();
   final InlineFieldController _descriptionFieldController =
       InlineFieldController();
   final InlineFieldController _projectFieldController = InlineFieldController();
-  String? _selectedProjectId;
 
   @override
   void initState() {
     super.initState();
+    _initDraft();
     _initControllers();
   }
 
+  void _initDraft() {
+    if (widget.task != null) {
+      _draft = widget.task!;
+    } else {
+      _draft = Task(
+        id: '',
+        projectId: '',
+        title: '',
+        description: '',
+        status: TaskStatus.open,
+        createdAt: DateTime.now(),
+      );
+    }
+  }
+
   void _initControllers() {
-    _titleController = TextEditingController(text: widget.task?.title ?? '');
-    _descriptionController = TextEditingController(
-      text: widget.task?.description ?? '',
-    );
-    _selectedProjectId = widget.task?.projectId;
+    _titleController = TextEditingController(text: _draft.title);
+    _descriptionController = TextEditingController(text: _draft.description);
   }
 
   @override
@@ -57,7 +71,8 @@ class _TaskDrawerState extends State<TaskDrawer> {
     if (!widget.isOpen && oldWidget.isOpen) {
       _isConfirmingDelete = false;
     }
-    if (widget.task != oldWidget.task) {
+    if (widget.task != oldWidget.task || widget.isOpen != oldWidget.isOpen) {
+      _initDraft();
       _initControllers();
     }
   }
@@ -72,25 +87,26 @@ class _TaskDrawerState extends State<TaskDrawer> {
     super.dispose();
   }
 
-  bool get _isNew => widget.isNew;
+  bool get _isNew => widget.task == null;
 
   void _handleSave() async {
     final state = context.read<ProjectTaskState>();
+
     if (_isNew) {
-      if (_selectedProjectId != null && _titleController.text.isNotEmpty) {
+      if (_draft.projectId != null && _titleController.text.isNotEmpty) {
         await state.createTask(
-          _selectedProjectId!,
+          _draft.projectId,
           _titleController.text,
           _descriptionController.text,
         );
         widget.onClose();
       }
     } else {
-      if (widget.task != null && _titleController.text.isNotEmpty) {
-        final updatedTask = widget.task!.copyWith(
+      if (_titleController.text.isNotEmpty) {
+        final updatedTask = _draft.copyWith(
           title: _titleController.text,
           description: _descriptionController.text,
-          projectId: _selectedProjectId,
+          projectId: _draft.projectId,
         );
         await state.updateTask(updatedTask);
         widget.onClose();
@@ -116,7 +132,7 @@ class _TaskDrawerState extends State<TaskDrawer> {
                 });
               },
       ),
-      body: widget.task == null
+      body: _draft == null
           ? const SizedBox.shrink()
           : Column(
               children: [
@@ -192,22 +208,15 @@ class _TaskDrawerState extends State<TaskDrawer> {
                       children: [
                         if (!_isNew) ...[
                           // Status Badge
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: theme.spacings.s12,
-                              vertical: theme.spacings.s4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: palette.accent.primaryMuted,
-                              borderRadius: theme.radiuses.pill.circular,
-                            ),
-                            child: Text(
-                              _getStatusText(widget.task!.status),
-                              style: theme.commonTextStyles.caption3Bold
-                                  .copyWith(color: palette.accent.primary),
-                            ),
+                          EntityMetaInfoRow(
+                            status: widget.task!.status == TaskStatus.done
+                                ? BadgeStatus.done
+                                : widget.task!.status == TaskStatus.archived
+                                ? BadgeStatus.ready
+                                : BadgeStatus.inProgress,
+                            statusLabel: _getStatusText(widget.task!.status),
+                            createdAt: widget.task!.createdAt,
                           ),
-                          SizedBox(height: theme.spacings.s16),
                         ],
 
                         // Title Input
@@ -258,15 +267,31 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                 child: Consumer<ProjectTaskState>(
                                   builder: (context, state, child) {
                                     final selectedProject = state.projects
-                                        .where(
-                                          (p) => p.id == _selectedProjectId,
-                                        )
+                                        .where((p) => p.id == _draft.projectId)
                                         .firstOrNull;
+
+                                    Widget? leadingProjectWidget;
+                                    if (selectedProject != null) {
+                                      final initials =
+                                          BadgeUtils.getProjectInitials(
+                                            selectedProject.name,
+                                          );
+                                      final colors = BadgeUtils.getBadgeColor(
+                                        selectedProject.id,
+                                      );
+                                      leadingProjectWidget = WsInitialBadge(
+                                        initials: initials,
+                                        backgroundColor: colors.$1,
+                                        textColor: colors.$2,
+                                        size: WsInitialBadgeSize.small,
+                                      );
+                                    }
 
                                     return InlineField(
                                       label: 'PROJECT',
                                       value: selectedProject?.name ?? '',
                                       placeholder: 'Select Project',
+                                      leading: leadingProjectWidget,
                                       controller: _projectFieldController,
                                       editWidget: Select<String>(
                                         autoOpen: true,
@@ -280,11 +305,13 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                                 .handleEditorClose();
                                           }
                                         },
-                                        value: _selectedProjectId,
+                                        value: _draft.projectId,
                                         placeholder: 'Select Project',
                                         onChanged: (value) {
                                           setState(() {
-                                            _selectedProjectId = value;
+                                            _draft = _draft.copyWith(
+                                              projectId: value,
+                                            );
                                           });
                                           _projectFieldController
                                               .handleEditorCommit();
@@ -314,8 +341,9 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                                     '',
                                                   );
                                               setState(() {
-                                                _selectedProjectId =
-                                                    newProject.id;
+                                                _draft = _draft.copyWith(
+                                                  projectId: newProject.id,
+                                                );
                                               });
                                               _projectFieldController
                                                   .handleEditorCommit();
@@ -324,9 +352,21 @@ class _TaskDrawerState extends State<TaskDrawer> {
                                           );
                                         },
                                         options: state.projects.map((p) {
+                                          final initials =
+                                              BadgeUtils.getProjectInitials(
+                                                p.name,
+                                              );
+                                          final colors =
+                                              BadgeUtils.getBadgeColor(p.id);
                                           return SelectOption(
                                             value: p.id,
                                             label: p.name,
+                                            leading: WsInitialBadge(
+                                              initials: initials,
+                                              backgroundColor: colors.$1,
+                                              textColor: colors.$2,
+                                              size: WsInitialBadgeSize.small,
+                                            ),
                                           );
                                         }).toList(),
                                       ),

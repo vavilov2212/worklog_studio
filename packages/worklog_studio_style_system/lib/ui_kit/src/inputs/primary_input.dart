@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 class PrimaryInput extends StatefulWidget {
   final TextEditingController controller;
+  final FocusNode? focusNode;
   final String? label;
   final String hintText;
   final String? description;
@@ -30,6 +31,7 @@ class PrimaryInput extends StatefulWidget {
     required this.label,
     required this.hintText,
     required this.controller,
+    this.focusNode,
     this.description,
     this.prefixWidget,
     this.prefixIconPadding,
@@ -61,8 +63,8 @@ class _PrimaryInputState extends State<PrimaryInput> {
   Color get backgroundColor {
     if (widget.variant == InputVariant.ghost) return Colors.transparent;
     return switch (widget.state) {
-      InputState.enabled =>
-        hasFocus ? palette.background.surface : palette.background.surfaceMuted,
+      InputState.enabled => hasFocus ? Colors.white : Colors.white,
+      // hasFocus ? palette.background.surface : palette.background.surfaceMuted,
       InputState.warning => palette.background.surface,
       InputState.error => palette.background.surface,
       InputState.disabled => palette.background.surfaceMuted,
@@ -73,7 +75,10 @@ class _PrimaryInputState extends State<PrimaryInput> {
     if (widget.variant == InputVariant.ghost) return null;
     return switch (widget.state) {
       InputState.enabled =>
-        hasFocus ? Border.all(color: palette.border.focus) : null,
+        hasFocus
+            ? Border.all(color: Color(0xFFebf0fd))
+            : Border.all(color: Color(0xFFebf0fd)),
+      // hasFocus ? Border.all(color: palette.border.focus) : null,
       InputState.warning => Border.all(color: palette.accent.warning),
       InputState.error => Border.all(color: palette.accent.danger),
       InputState.disabled => null,
@@ -144,6 +149,7 @@ class _PrimaryInputState extends State<PrimaryInput> {
                     ),
                   Expanded(
                     child: TextField(
+                      focusNode: widget.focusNode,
                       autofocus: widget.autofocus,
                       controller: controller,
                       enabled:

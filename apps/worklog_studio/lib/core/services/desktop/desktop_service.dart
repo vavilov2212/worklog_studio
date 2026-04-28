@@ -113,12 +113,14 @@ class DesktopService {
         if (_leaderBloc != null) {
           _broadcastSnapshotIfReady(_leaderBloc!.state);
         }
-      } else if (method == 'openHistory') {
+      } else if (method == 'openMainWindow') {
         _channel.invokeMethod('focusMainWindow');
-        _navigationStreamController.add('history');
-      } else if (method == 'openTasks') {
-        _channel.invokeMethod('focusMainWindow');
-        _navigationStreamController.add('tasks');
+        if (payload != null && payload is Map) {
+          final route = payload['route'] as String?;
+          if (route != null) {
+            _navigationStreamController.add(route);
+          }
+        }
       } else if (method == 'miniClosed') {
         _followerReady = false;
       } else if (method == 'miniClosed_native') {
@@ -176,30 +178,16 @@ class DesktopService {
     }
   }
 
-  void openHistoryFromTray() {
+  void openMainWindowFromTray({String? route}) {
     if (!_isPopover) return;
     try {
       _channel.invokeMethod('sendMessage', {
         'target': 'main',
-        'method': 'openHistory',
-        'payload': null,
-      });
-      // Optionally also close popover natively depending on design
-    } catch (e) {
-      debugPrint("Failed to open history: $e");
-    }
-  }
-
-  void openTasksFromTray() {
-    if (!_isPopover) return;
-    try {
-      _channel.invokeMethod('sendMessage', {
-        'target': 'main',
-        'method': 'openTasks',
-        'payload': null,
+        'method': 'openMainWindow',
+        'payload': {'route': route},
       });
     } catch (e) {
-      debugPrint("Failed to open tasks: $e");
+      debugPrint("Failed to open main window: $e");
     }
   }
 

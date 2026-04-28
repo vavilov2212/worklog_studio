@@ -10,6 +10,7 @@ class InlineField extends StatefulWidget {
   final bool isTextArea;
   final InlineFieldController controller;
   final TextEditingController? textController;
+  final Widget? leading;
 
   const InlineField({
     super.key,
@@ -20,6 +21,7 @@ class InlineField extends StatefulWidget {
     this.isTextArea = false,
     required this.controller,
     this.textController,
+    this.leading,
   });
 
   @override
@@ -141,6 +143,9 @@ class _InlineFieldState extends State<InlineField> {
                       child: Row(
                         spacing: theme.spacings.s8,
                         children: [
+                          if (widget.leading != null &&
+                              _displayValue.isNotEmpty)
+                            widget.leading!,
                           Expanded(
                             child: Text(
                               _displayValue.isEmpty

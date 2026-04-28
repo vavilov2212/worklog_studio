@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:worklog_studio/domain/resolved_task.dart';
 import 'package:worklog_studio/domain/task.dart';
-import 'package:worklog_studio/feature/common/presentation/components/card_content.dart';
+import 'package:worklog_studio/feature/common/presentation/components/card_row.dart';
 import 'package:worklog_studio/feature/common/presentation/interactive_card.dart';
 import 'package:worklog_studio_style_system/theme/colors_palette/colors_palette_entity.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
+import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
+import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
 
 class TaskCard extends StatelessWidget {
   final ResolvedTask task;
@@ -23,23 +25,19 @@ class TaskCard extends StatelessWidget {
     final theme = context.theme;
     final palette = theme.colorsPalette;
 
-    Color accentColor;
     IconData trailingIcon;
     Color trailingIconColor;
 
     switch (task.status) {
       case TaskStatus.open:
-        accentColor = palette.accent.primary;
         trailingIcon = Icons.radio_button_unchecked;
         trailingIconColor = palette.text.muted;
         break;
       case TaskStatus.done:
-        accentColor = palette.accent.success;
         trailingIcon = Icons.check_circle;
         trailingIconColor = palette.text.secondary;
         break;
       default:
-        accentColor = Colors.transparent;
         trailingIcon = Icons.radio_button_unchecked;
         trailingIconColor = palette.text.muted;
         break;
@@ -48,59 +46,113 @@ class TaskCard extends StatelessWidget {
     return InteractiveCard(
       isSelected: isSelected,
       onTap: onTap,
-      child: CardContent(
-        leading: accentColor != Colors.transparent
-            ? Container(
-                width: 4,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: accentColor,
-                  borderRadius: theme.radiuses.pill.circular,
+      child: CardRow(
+        columns: [
+          CardColumn(
+            flex: 3,
+            child: Row(
+              children: [
+                Builder(
+                  builder: (context) {
+                    final initials = BadgeUtils.getTaskInitials(
+                      task.title,
+                      task.projectName,
+                    );
+                    final colors = BadgeUtils.getBadgeColor(task.id);
+                    return WsInitialBadge(
+                      initials: initials,
+                      backgroundColor: colors.$1,
+                      textColor: colors.$2,
+                    );
+                  },
                 ),
-              )
-            : const SizedBox(width: 4, height: 40),
-        title: Text(
-          task.title,
-          style: task.status == TaskStatus.done
-              ? theme.commonTextStyles.h3.copyWith(
-                  decoration: TextDecoration.lineThrough,
-                  color: palette.text.secondary,
-                )
-              : theme.commonTextStyles.h3,
-        ),
-        subtitle: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: theme.spacings.s8,
-                vertical: theme.spacings.s2,
-              ),
-              decoration: BoxDecoration(
-                color: _getStatusColor(
-                  task.status,
-                  palette,
-                ).withValues(alpha: 0.1),
-                borderRadius: theme.radiuses.sm.circular,
-              ),
-              child: Text(
-                _getStatusText(task.status),
-                style: theme.commonTextStyles.caption3Bold.copyWith(
-                  color: _getStatusColor(task.status, palette),
-                  letterSpacing: 0.5,
+                SizedBox(width: theme.spacings.s12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        task.title,
+                        style: task.status == TaskStatus.done
+                            ? theme.commonTextStyles.bodyBold.copyWith(
+                                decoration: TextDecoration.lineThrough,
+                                color: palette.text.secondary,
+                                overflow: TextOverflow.ellipsis,
+                              )
+                            : theme.commonTextStyles.bodyBold.copyWith(
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: theme.spacings.s8,
+                              vertical: theme.spacings.s2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _getStatusColor(
+                                task.status,
+                                palette,
+                              ).withValues(alpha: 0.1),
+                              borderRadius: theme.radiuses.sm.circular,
+                            ),
+                            child: Text(
+                              _getStatusText(task.status),
+                              style: theme.commonTextStyles.caption3Bold
+                                  .copyWith(
+                                    color: _getStatusColor(
+                                      task.status,
+                                      palette,
+                                    ),
+                                    letterSpacing: 0.5,
+                                  ),
+                            ),
+                          ),
+                          SizedBox(width: theme.spacings.s8),
+                          Expanded(
+                            child: Text(
+                              task.projectName,
+                              style: theme.commonTextStyles.caption.copyWith(
+                                color: palette.text.secondary,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ),
-            SizedBox(width: theme.spacings.s8),
-            Text(
-              task.projectName,
-              style: theme.commonTextStyles.caption.copyWith(
-                color: palette.text.secondary,
-              ),
+          ),
+          CardColumn(
+            flex: 4,
+            child: Text(
+              task.description.isEmpty ? 'No description' : task.description,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: task.status == TaskStatus.done
+                  ? theme.commonTextStyles.caption.copyWith(
+                      decoration: TextDecoration.lineThrough,
+                      color: palette.text.secondary.withValues(alpha: 0.5),
+                    )
+                  : theme.commonTextStyles.caption.copyWith(
+                      color: task.description.isEmpty
+                          ? palette.text.secondary.withValues(alpha: 0.5)
+                          : palette.text.secondary,
+                    ),
             ),
-          ],
-        ),
-        trailing: Icon(trailingIcon, color: trailingIconColor, size: 24),
+          ),
+          CardColumn(
+            flex: 1,
+            alignment: Alignment.centerRight,
+            child: Icon(trailingIcon, color: trailingIconColor, size: 24),
+          ),
+        ],
       ),
     );
   }
