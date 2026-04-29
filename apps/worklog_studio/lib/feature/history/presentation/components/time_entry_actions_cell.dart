@@ -18,7 +18,12 @@ class TimeEntryActionsCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final entry = resolvedEntry.entry;
 
-    if (resolvedEntry.isRunning) {
+    final isRunningThis = context.select<TimeTrackerBloc, bool>(
+      (bloc) =>
+          bloc.state.isRunning && bloc.state.activeEntryOrNull?.id == entry.id,
+    );
+
+    if (isRunningThis) {
       return PrimaryButton(
         initialAnimationDuration: Duration(milliseconds: 20),
 

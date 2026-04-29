@@ -5,6 +5,8 @@ import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/domain/task.dart';
 import 'package:worklog_studio/domain/resolved_task.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
+import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
+import 'package:worklog_studio/feature/time_tracker/presentation/components/live_duration_text.dart';
 import 'components/tasks_card.dart';
 import 'components/tasks_drawer.dart';
 import 'package:worklog_studio/feature/common/presentation/drawer_controller_state.dart';
@@ -238,9 +240,22 @@ class TaskList extends StatelessWidget {
         },
       ),
       WsTableColumn(
-        title: 'Time',
+        title: 'Time tracked',
         flex: 2,
         builder: (context, item, isHovered) {
+          final isActive = context.select<TimeTrackerBloc, bool>(
+            (bloc) => bloc.state.activeEntryOrNull?.taskId == item.id,
+          );
+
+          if (isActive) {
+            return LiveDurationText(
+              durationBuilder: (now) => item.duration(now),
+              style: theme.commonTextStyles.bodyBold.copyWith(
+                color: theme.colorsPalette.accent.primary,
+              ),
+            );
+          }
+
           final duration = item.duration(DateTime.now());
           return Text(
             _formatExactDuration(duration),
@@ -252,6 +267,20 @@ class TaskList extends StatelessWidget {
         title: 'Status',
         flex: 1,
         builder: (context, item, isHovered) {
+          final isActive = context.select<TimeTrackerBloc, bool>(
+            (bloc) => bloc.state.activeEntryOrNull?.taskId == item.id,
+          );
+
+          if (isActive) {
+            return const Align(
+              alignment: Alignment.centerLeft,
+              child: StatusBadge(
+                status: BadgeStatus.inProgress,
+                label: 'RUNNING',
+              ),
+            );
+          }
+
           return Align(
             alignment: Alignment.centerLeft,
             child: StatusBadge(

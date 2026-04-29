@@ -11,6 +11,7 @@ class InlineField extends StatefulWidget {
   final InlineFieldController controller;
   final TextEditingController? textController;
   final Widget? leading;
+  final bool isEditable;
 
   const InlineField({
     super.key,
@@ -22,6 +23,7 @@ class InlineField extends StatefulWidget {
     required this.controller,
     this.textController,
     this.leading,
+    this.isEditable = true,
   });
 
   @override
@@ -82,6 +84,7 @@ class _InlineFieldState extends State<InlineField> {
   bool get _currentIsEditing => widget.controller.isEditing;
 
   void _handleTap() {
+    if (!widget.isEditable) return;
     widget.controller.enterEditMode(widget.value);
   }
 
@@ -91,9 +94,13 @@ class _InlineFieldState extends State<InlineField> {
     final palette = theme.colorsPalette;
 
     Widget content = MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
+      onEnter: (_) {
+        if (widget.isEditable) setState(() => _isHovered = true);
+      },
       onExit: (_) => setState(() => _isHovered = false),
-      cursor: SystemMouseCursors.click,
+      cursor: widget.isEditable
+          ? SystemMouseCursors.click
+          : SystemMouseCursors.basic,
       child: GestureDetector(
         onTap: _handleTap,
         behavior: HitTestBehavior.opaque,
@@ -133,7 +140,7 @@ class _InlineFieldState extends State<InlineField> {
                         vertical: theme.spacings.s12,
                       ),
                       decoration: BoxDecoration(
-                        color: _isHovered
+                        color: _isHovered && widget.isEditable
                             ? palette.background.surfaceMuted
                             : Colors.transparent,
                         borderRadius: theme.radiuses.md.circular,
@@ -154,7 +161,11 @@ class _InlineFieldState extends State<InlineField> {
                               style: theme.commonTextStyles.body.copyWith(
                                 color: _displayValue.isEmpty
                                     ? palette.text.muted
-                                    : palette.text.primary,
+                                    : (widget.isEditable
+                                          ? palette.text.primary
+                                          : palette.text.secondary.withValues(
+                                              alpha: 0.5,
+                                            )),
                                 fontStyle: _displayValue.isEmpty
                                     ? FontStyle.italic
                                     : null,
@@ -165,7 +176,7 @@ class _InlineFieldState extends State<InlineField> {
                                   : TextOverflow.ellipsis,
                             ),
                           ),
-                          _isHovered
+                          _isHovered && widget.isEditable
                               ? Icon(
                                   Icons.edit_sharp,
                                   color: _isHovered

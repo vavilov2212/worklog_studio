@@ -6,6 +6,8 @@ import 'package:worklog_studio/domain/time_entry.dart';
 import 'package:worklog_studio/domain/resolved_time_entry.dart';
 import 'package:worklog_studio/state/entity_resolver.dart';
 import 'package:worklog_studio/state/project_task_state.dart';
+import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
+import 'package:worklog_studio/feature/time_tracker/presentation/components/live_duration_text.dart';
 import 'package:worklog_studio/feature/common/presentation/drawer_controller_state.dart';
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
 import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
@@ -54,7 +56,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Widget build(BuildContext context) {
     final state = context.watch<ProjectTaskState>();
     final resolvedEntries = context
-        .read<EntityResolver>()
+        .watch<EntityResolver>()
         .getResolvedTimeEntries();
 
     return Scaffold(
@@ -343,18 +345,27 @@ class TimeEntryList extends StatelessWidget {
         flex: 2,
         builder: (context, item, isHovered) {
           final palette = theme.colorsPalette;
+          final isActive = context.select<TimeTrackerBloc, bool>(
+            (bloc) => bloc.state.activeEntryOrNull?.id == item.entry.id,
+          );
+
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                _formatExactDuration(item.duration(DateTime.now())),
-                style: theme.commonTextStyles.bodyBold.copyWith(
-                  color: item.isRunning
-                      ? palette.accent.primary
-                      : palette.text.primary,
-                ),
-              ),
+              isActive
+                  ? LiveDurationText(
+                      durationBuilder: (now) => item.duration(now),
+                      style: theme.commonTextStyles.bodyBold.copyWith(
+                        color: palette.accent.primary,
+                      ),
+                    )
+                  : Text(
+                      _formatExactDuration(item.duration(DateTime.now())),
+                      style: theme.commonTextStyles.bodyBold.copyWith(
+                        color: palette.text.primary,
+                      ),
+                    ),
               Text(
                 _formatTimeRange(item.startAt, item.endAt),
                 style: theme.commonTextStyles.caption.copyWith(
@@ -413,7 +424,11 @@ class TimeEntryList extends StatelessWidget {
         title: 'Status',
         flex: 1,
         builder: (context, item, isHovered) {
-          if (item.isRunning) {
+          final isActive = context.select<TimeTrackerBloc, bool>(
+            (bloc) => bloc.state.activeEntryOrNull?.id == item.entry.id,
+          );
+
+          if (isActive) {
             return const Align(
               alignment: Alignment.centerLeft,
               child: StatusBadge(

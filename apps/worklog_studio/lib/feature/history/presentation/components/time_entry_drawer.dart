@@ -16,6 +16,7 @@ import 'package:worklog_studio/domain/time_entry.dart';
 import 'package:worklog_studio/domain/project.dart';
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
 import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
+import 'package:worklog_studio/feature/time_tracker/presentation/components/live_duration_text.dart';
 
 class TimeEntryDrawer extends StatefulWidget {
   final ResolvedTimeEntry? resolvedEntry;
@@ -79,10 +80,27 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
     );
     _startTimeController = TextEditingController(
       text: _formatTimeInput(_draft.startAt),
-    );
+    )..addListener(_onTimeChanged);
     _endTimeController = TextEditingController(
       text: _draft.endAt != null ? _formatTimeInput(_draft.endAt!) : '',
-    );
+    )..addListener(_onTimeChanged);
+  }
+
+  void _onTimeChanged() {
+    if (!mounted) return;
+
+    final startAt = _parseTimeInput(_startTimeController.text, _draft.startAt);
+    final endAt = _endTimeController.text.isNotEmpty
+        ? _parseTimeInput(_endTimeController.text, _draft.endAt ?? startAt)
+        : null;
+
+    if (_draft.startAt != startAt || _draft.endAt != endAt) {
+      setState(() {
+        _draft = _draft.copyWith(
+          entry: _draft.entry.copyWith(startAt: startAt, endAt: endAt),
+        );
+      });
+    }
   }
 
   @override
@@ -94,8 +112,36 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
     if (widget.resolvedEntry != oldWidget.resolvedEntry ||
         widget.isOpen != oldWidget.isOpen) {
       _initDraft();
-      _initControllers();
+
+      final newStartText = _formatTimeInput(_draft.startAt);
+      if (_startTimeController.text != newStartText) {
+        _startTimeController.text = newStartText;
+      }
+
+      final newEndText = _draft.endAt != null
+          ? _formatTimeInput(_draft.endAt!)
+          : '';
+      if (_endTimeController.text != newEndText) {
+        _endTimeController.text = newEndText;
+      }
+
+      if (_commentController.text != (_draft.entry.comment ?? '')) {
+        _commentController.text = _draft.entry.comment ?? '';
+      }
     }
+  }
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    _startTimeController.dispose();
+    _endTimeController.dispose();
+    _projectFieldController.dispose();
+    _taskFieldController.dispose();
+    _commentFieldController.dispose();
+    _startTimeFieldController.dispose();
+    _endTimeFieldController.dispose();
+    super.dispose();
   }
 
   bool get _isNew => widget.resolvedEntry == null;
@@ -161,6 +207,12 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
   Widget build(BuildContext context) {
     final theme = context.theme;
     final palette = theme.colorsPalette;
+
+    final isActive = context.select<TimeTrackerBloc, bool>(
+      (bloc) =>
+          bloc.state.activeEntryOrNull?.id == _draft.entry.id &&
+          _draft.entry.id.isNotEmpty,
+    );
 
     return ResizableDrawer(
       isOpen: widget.isOpen,
@@ -251,13 +303,13 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                       children: [
                         if (!_isNew) ...[
                           EntityMetaInfoRow(
-                            status: widget.resolvedEntry!.isRunning
+                            status: isActive
                                 ? BadgeStatus.inProgress
                                 : BadgeStatus.ready,
-                            statusLabel: getStatusText(
-                              widget.resolvedEntry!.entry.status,
-                            ),
-                            createdAt: widget.resolvedEntry!.entry.startAt,
+                            statusLabel: isActive
+                                ? 'RUNNING'
+                                : getStatusText(_draft.entry.status),
+                            createdAt: _draft.entry.startAt,
                           ),
                         ],
 
@@ -536,6 +588,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                   label: 'END TIME',
                                   value: _endTimeController.text,
                                   placeholder: 'HH:mm',
+                                  isEditable: !isActive,
                                   controller: _endTimeFieldController,
                                   textController: _endTimeController,
                                   editWidget: PrimaryInput(
@@ -574,12 +627,18 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                                             ),
                                       ),
                                       SizedBox(height: theme.spacings.s8),
-                                      Text(
-                                        _formatDuration(
-                                          _draft.duration(DateTime.now()),
-                                        ),
-                                        style: theme.commonTextStyles.h2,
-                                      ),
+                                      isActive
+                                          ? LiveDurationText(
+                                              durationBuilder: (now) => now
+                                                  .difference(_draft.startAt),
+                                              style: theme.commonTextStyles.h2,
+                                            )
+                                          : Text(
+                                              _formatDuration(
+                                                _draft.duration(DateTime.now()),
+                                              ),
+                                              style: theme.commonTextStyles.h2,
+                                            ),
                                     ],
                                   ),
                                 ),

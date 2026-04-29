@@ -17,13 +17,14 @@ class TaskActionsCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Check if this task is currently running
-    final blocState = context.watch<TimeTrackerBloc>().state;
-    final isRunningThis =
-        blocState.isRunning && blocState.activeEntryOrNull?.taskId == task.id;
+    final isRunningThis = context.select<TimeTrackerBloc, bool>(
+      (bloc) =>
+          bloc.state.isRunning &&
+          bloc.state.activeEntryOrNull?.taskId == task.id,
+    );
 
     if (isRunningThis) {
       return PrimaryButton(
-        initialAnimationDuration: Duration(milliseconds: 20),
         type: isHovered ? ButtonType.danger : ButtonType.ghost,
         size: ButtonSize.sm,
         leftIcon: WorklogStudioAssets.vectors.squareFilled24Svg,
@@ -33,8 +34,6 @@ class TaskActionsCell extends StatelessWidget {
       );
     } else {
       return PrimaryButton(
-        initialAnimationDuration: Duration(milliseconds: 20),
-
         type: isHovered ? ButtonType.primary : ButtonType.ghost,
         size: ButtonSize.sm,
         leftIcon: WorklogStudioAssets.vectors.playFilled24Svg,

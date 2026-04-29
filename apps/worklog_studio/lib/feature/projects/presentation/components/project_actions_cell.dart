@@ -17,10 +17,11 @@ class ProjectActionsCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Assuming we can check if it's currently running via bloc state
-    final blocState = context.watch<TimeTrackerBloc>().state;
-    final isRunningThis =
-        blocState.isRunning &&
-        blocState.activeEntryOrNull?.projectId == project.id;
+    final isRunningThis = context.select<TimeTrackerBloc, bool>(
+      (bloc) =>
+          bloc.state.isRunning &&
+          bloc.state.activeEntryOrNull?.projectId == project.id,
+    );
 
     if (isRunningThis) {
       return PrimaryButton(

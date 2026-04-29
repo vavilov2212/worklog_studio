@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:worklog_studio/feature/common/presentation/components/card_row.dart';
 import 'package:worklog_studio/feature/common/presentation/interactive_card.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/domain/resolved_time_entry.dart';
 import 'package:worklog_studio/feature/common/utils/badge_utils.dart';
 import 'package:worklog_studio/feature/common/presentation/components/ws_initial_badge.dart';
+import 'package:worklog_studio/feature/time_tracker/bloc/time_tracker_bloc.dart';
+import 'package:worklog_studio/feature/time_tracker/presentation/components/live_duration_text.dart';
 
 class TimeEntryCard extends StatelessWidget {
   final ResolvedTimeEntry resolvedEntry;
@@ -78,27 +81,48 @@ class TimeEntryCard extends StatelessWidget {
           CardColumn(
             flex: 2,
             alignment: Alignment.centerRight,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _formatDuration(resolvedEntry.duration(DateTime.now())),
-                  style: theme.commonTextStyles.bodyBold.copyWith(
-                    color: resolvedEntry.isRunning
-                        ? palette.accent.primary
-                        : palette.text.primary,
-                    fontSize: 16,
-                  ),
-                ),
-                SizedBox(height: theme.spacings.s4),
-                Text(
-                  _formatTimeRange(resolvedEntry.startAt, resolvedEntry.endAt),
-                  style: theme.commonTextStyles.caption.copyWith(
-                    color: palette.text.secondary,
-                  ),
-                ),
-              ],
+            child: Builder(
+              builder: (context) {
+                final isActive = context.select<TimeTrackerBloc, bool>(
+                  (bloc) =>
+                      bloc.state.activeEntryOrNull?.id ==
+                      resolvedEntry.entry.id,
+                );
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    isActive
+                        ? LiveDurationText(
+                            durationBuilder: (now) =>
+                                resolvedEntry.duration(now),
+                            style: theme.commonTextStyles.bodyBold.copyWith(
+                              color: palette.accent.primary,
+                              fontSize: 16,
+                            ),
+                          )
+                        : Text(
+                            _formatDuration(
+                              resolvedEntry.duration(DateTime.now()),
+                            ),
+                            style: theme.commonTextStyles.bodyBold.copyWith(
+                              color: palette.text.primary,
+                              fontSize: 16,
+                            ),
+                          ),
+                    SizedBox(height: theme.spacings.s4),
+                    Text(
+                      _formatTimeRange(
+                        resolvedEntry.startAt,
+                        resolvedEntry.endAt,
+                      ),
+                      style: theme.commonTextStyles.caption.copyWith(
+                        color: palette.text.secondary,
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
           CardColumn(

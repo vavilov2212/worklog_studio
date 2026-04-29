@@ -109,11 +109,11 @@ class TopAppBar extends StatelessWidget {
     final palette = theme.colorsPalette;
 
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: theme.spacings.s32,
-        vertical: theme.spacings.s16,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: palette.background.surface,
+        border: Border(bottom: BorderSide(color: palette.border.primary)),
       ),
-      decoration: BoxDecoration(color: palette.background.canvas),
       child: const GlobalTimeTrackerPanel(),
     );
   }
@@ -187,26 +187,10 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
           return Container(
             width: double.infinity,
             padding: EdgeInsets.symmetric(
-              horizontal: theme.spacings.s24,
+              horizontal: theme.spacings.s32,
               vertical: theme.spacings.s16,
             ),
-            decoration: BoxDecoration(
-              color: palette.background.surface,
-              borderRadius: theme.radiuses.lg.circular,
-              border: Border.all(
-                color: isRunning
-                    ? palette.accent.primary.withValues(alpha: 0.5)
-                    : palette.border.primary,
-                width: 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
+            decoration: const BoxDecoration(color: Colors.transparent),
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final projectField = _buildProjectSelector(
@@ -403,6 +387,11 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
       leading: leadingWidget,
       controller: _projectFieldController,
       editWidget: Select<String>(
+        autoOpen: true,
+        tapRegionGroupId: _projectFieldController.tapRegionGroupId,
+        onOpenChange: (isOpen) {
+          if (!isOpen) _projectFieldController.handleEditorClose();
+        },
         value: selectedId,
         placeholder: 'Select Project',
         searchable: true,
@@ -518,6 +507,11 @@ class _GlobalTimeTrackerPanelState extends State<GlobalTimeTrackerPanel> {
       leading: leadingWidget,
       controller: _taskFieldController,
       editWidget: Select<String>(
+        autoOpen: true,
+        tapRegionGroupId: _taskFieldController.tapRegionGroupId,
+        onOpenChange: (isOpen) {
+          if (!isOpen) _taskFieldController.handleEditorClose();
+        },
         value: selectedId,
         placeholder: 'Select Task',
         searchable: true,
@@ -638,7 +632,10 @@ class SidebarNavigation extends StatelessWidget {
 
     return Container(
       width: 240,
-      color: palette.background.surface,
+      decoration: BoxDecoration(
+        color: palette.background.surface,
+        border: Border(right: BorderSide(color: palette.border.primary)),
+      ),
       child: Column(
         children: [
           Padding(
