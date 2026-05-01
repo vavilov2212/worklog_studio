@@ -11,6 +11,7 @@ class InlineField extends StatefulWidget {
   final InlineFieldController controller;
   final TextEditingController? textController;
   final Widget? leading;
+  final Widget? trailing;
   final bool isEditable;
 
   const InlineField({
@@ -23,6 +24,7 @@ class InlineField extends StatefulWidget {
     required this.controller,
     this.textController,
     this.leading,
+    this.trailing,
     this.isEditable = true,
   });
 
@@ -176,15 +178,19 @@ class _InlineFieldState extends State<InlineField> {
                                   : TextOverflow.ellipsis,
                             ),
                           ),
-                          _isHovered && widget.isEditable
-                              ? Icon(
-                                  Icons.edit_sharp,
-                                  color: _isHovered
-                                      ? palette.text.secondary
-                                      : palette.text.muted,
-                                  size: 16.0,
-                                )
-                              : SizedBox.shrink(),
+                          if (widget.isEditable)
+                            Visibility(
+                              visible: _isHovered,
+                              maintainSize: true,
+                              maintainAnimation: true,
+                              maintainState: true,
+                              child: Icon(
+                                Icons.edit_sharp,
+                                color: palette.text.secondary,
+                                size: 16.0,
+                              ),
+                            ),
+                          if (widget.trailing != null) widget.trailing!,
                         ],
                       ),
                     ),

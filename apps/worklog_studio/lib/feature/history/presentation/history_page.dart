@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' hide DrawerControllerState;
 import 'package:provider/provider.dart';
 import 'package:collection/collection.dart';
+import 'package:worklog_studio/feature/common/utils/date_format_utils.dart';
 import 'package:worklog_studio_style_system/worklog_studio_style_system.dart';
 import 'package:worklog_studio/domain/time_entry.dart';
 import 'package:worklog_studio/domain/resolved_time_entry.dart';
@@ -367,7 +368,10 @@ class TimeEntryList extends StatelessWidget {
                       ),
                     ),
               Text(
-                _formatTimeRange(item.startAt, item.endAt),
+                DateFormatUtils.formatTimeRangeWithDate(
+                  item.startAt,
+                  item.endAt,
+                ),
                 style: theme.commonTextStyles.caption.copyWith(
                   color: palette.text.secondary,
                 ),
@@ -462,12 +466,6 @@ class TimeEntryList extends StatelessWidget {
     final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
     final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
     return '$hours:$minutes:$seconds';
-  }
-
-  String _formatTimeRange(DateTime start, DateTime? end) {
-    final startStr = _formatTime(start);
-    final endStr = end != null ? _formatTime(end) : 'Now';
-    return '$startStr - $endStr';
   }
 
   String _formatTime(DateTime time) {

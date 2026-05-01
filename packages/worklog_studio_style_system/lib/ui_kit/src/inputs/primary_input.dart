@@ -63,8 +63,8 @@ class _PrimaryInputState extends State<PrimaryInput> {
   Color get backgroundColor {
     if (widget.variant == InputVariant.ghost) return Colors.transparent;
     return switch (widget.state) {
-      InputState.enabled => hasFocus ? Colors.white : Colors.white,
-      // hasFocus ? palette.background.surface : palette.background.surfaceMuted,
+      InputState.enabled =>
+        hasFocus ? palette.background.surface : palette.background.surfaceMuted,
       InputState.warning => palette.background.surface,
       InputState.error => palette.background.surface,
       InputState.disabled => palette.background.surfaceMuted,
@@ -75,10 +75,7 @@ class _PrimaryInputState extends State<PrimaryInput> {
     if (widget.variant == InputVariant.ghost) return null;
     return switch (widget.state) {
       InputState.enabled =>
-        hasFocus
-            ? Border.all(color: Color(0xFFebf0fd))
-            : Border.all(color: Color(0xFFebf0fd)),
-      // hasFocus ? Border.all(color: palette.border.focus) : null,
+        hasFocus ? Border.all(color: palette.border.focus) : null,
       InputState.warning => Border.all(color: palette.accent.warning),
       InputState.error => Border.all(color: palette.accent.danger),
       InputState.disabled => null,
@@ -159,17 +156,20 @@ class _PrimaryInputState extends State<PrimaryInput> {
                       keyboardType: widget.keyboardType,
                       cursorColor: palette.border.focus,
                       decoration: InputDecoration(
-                        isDense: true,
+                        isDense: false,
                         border: InputBorder.none,
                         hintText: widget.hintText,
                         hintStyle: context.theme.commonTextStyles.body.copyWith(
                           color: palette.text.muted,
                         ),
-                        contentPadding: EdgeInsets.zero,
                         counterText: widget.showCounter ? null : '',
                       ),
                       style: context.theme.commonTextStyles.body.copyWith(
                         color: textColor,
+                      ),
+                      strutStyle: const StrutStyle(
+                        forceStrutHeight: true,
+                        height: 1.2,
                       ),
                       onChanged: (value) {
                         widget.onChanged?.call(value);

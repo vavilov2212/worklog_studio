@@ -99,19 +99,7 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       setState(() {
-        final resolver = context.read<EntityResolver>();
-        final resolvedProject = updatedEntry.projectId != null
-            ? resolver.getResolvedProject(updatedEntry.projectId!)?.project
-            : null;
-        final resolvedTask = updatedEntry.taskId != null
-            ? resolver.getResolvedTask(updatedEntry.taskId!)?.task
-            : null;
-
-        _draft = _draft.copyWith(
-          entry: updatedEntry,
-          project: resolvedProject,
-          task: resolvedTask,
-        );
+        _draft = _draft.copyWith(entry: updatedEntry);
       });
       if (!_isNew) {
         context.read<TimeTrackerBloc>().add(
@@ -279,222 +267,6 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                         ],
 
                         // Project Select
-                        Consumer<ProjectTaskState>(
-                          builder: (context, state, child) {
-                            final selectedProject = state.projects
-                                .where((p) => p.id == _draft.projectId)
-                                .firstOrNull;
-
-                            Widget? leadingProjectWidget;
-                            if (selectedProject != null) {
-                              final initials = BadgeUtils.getProjectInitials(
-                                selectedProject.name,
-                              );
-                              final colors = BadgeUtils.getBadgeColor(
-                                selectedProject.id,
-                              );
-                              leadingProjectWidget = WsInitialBadge(
-                                initials: initials,
-                                backgroundColor: colors.$1,
-                                textColor: colors.$2,
-                                size: WsInitialBadgeSize.small,
-                              );
-                            }
-
-                            return InlineField(
-                              label: 'PROJECT',
-                              value: selectedProject?.name ?? '',
-                              placeholder: 'Select Project',
-                              leading: leadingProjectWidget,
-                              controller: _projectFieldController,
-                              editWidget: Select<String>(
-                                autoOpen: true,
-                                searchable: true,
-                                tapRegionGroupId:
-                                    _projectFieldController.tapRegionGroupId,
-                                onOpenChange: (isOpen) {
-                                  if (!isOpen) {
-                                    _projectFieldController.handleEditorClose();
-                                  }
-                                },
-                                value: _draft.projectId,
-                                placeholder: 'Select Project',
-                                onChanged: (value) {
-                                  final updatedEntry = _draft.entry.copyWith(
-                                    projectId: value,
-                                    taskId: null,
-                                  );
-
-                                  _updateDraft(updatedEntry);
-
-                                  _projectFieldController.handleEditorCommit();
-                                },
-                                actionBuilder: (context, query, close) {
-                                  final exactMatchExists = state.projects.any(
-                                    (p) =>
-                                        p.name.toLowerCase() ==
-                                        query.toLowerCase(),
-                                  );
-                                  if (exactMatchExists && query.isNotEmpty)
-                                    return const SizedBox.shrink();
-
-                                  return SelectCreateAction(
-                                    label: query.isEmpty
-                                        ? 'Create new project'
-                                        : 'Create project "$query"',
-                                    onTap: () async {
-                                      final newProject = await state
-                                          .createProject(
-                                            query.isEmpty
-                                                ? 'New project'
-                                                : query,
-                                            '',
-                                          );
-                                      final updatedEntry = _draft.entry
-                                          .copyWith(
-                                            projectId: newProject.id,
-                                            taskId: null,
-                                          );
-                                      _updateDraft(updatedEntry);
-                                      _projectFieldController
-                                          .handleEditorCommit();
-                                      close();
-                                    },
-                                  );
-                                },
-                                options: state.projects.map((p) {
-                                  final initials =
-                                      BadgeUtils.getProjectInitials(p.name);
-                                  final colors = BadgeUtils.getBadgeColor(p.id);
-                                  return SelectOption(
-                                    value: p.id,
-                                    label: p.name,
-                                    leading: WsInitialBadge(
-                                      initials: initials,
-                                      backgroundColor: colors.$1,
-                                      textColor: colors.$2,
-                                      size: WsInitialBadgeSize.small,
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                            );
-                          },
-                        ),
-                        SizedBox(height: theme.spacings.s16),
-                        // Task Select
-                        Consumer<ProjectTaskState>(
-                          builder: (context, state, child) {
-                            final selectedTask = state.tasks
-                                .where((t) => t.id == _draft.taskId)
-                                .firstOrNull;
-
-                            Widget? leadingTaskWidget;
-                            if (selectedTask != null) {
-                              final project = state.projects.firstWhereOrNull(
-                                (p) => p.id == selectedTask.projectId,
-                              );
-                              final initials = BadgeUtils.getTaskInitials(
-                                selectedTask.title,
-                                project?.name ?? '',
-                              );
-                              final colors = BadgeUtils.getBadgeColor(
-                                selectedTask.id,
-                              );
-                              leadingTaskWidget = WsInitialBadge(
-                                initials: initials,
-                                backgroundColor: colors.$1,
-                                textColor: colors.$2,
-                                size: WsInitialBadgeSize.small,
-                              );
-                            }
-
-                            return InlineField(
-                              label: 'TASK',
-                              value: selectedTask?.title ?? '',
-                              placeholder: 'Select Task',
-                              leading: leadingTaskWidget,
-                              controller: _taskFieldController,
-                              editWidget: Select<String>(
-                                autoOpen: true,
-                                searchable: true,
-                                tapRegionGroupId:
-                                    _taskFieldController.tapRegionGroupId,
-                                onOpenChange: (isOpen) {
-                                  if (!isOpen) {
-                                    _taskFieldController.handleEditorClose();
-                                  }
-                                },
-                                value: _draft.taskId,
-                                placeholder: 'Select Task',
-                                onChanged: (value) {
-                                  final updatedEntry = _draft.entry.copyWith(
-                                    taskId: value,
-                                  );
-                                  _updateDraft(updatedEntry);
-                                  _taskFieldController.handleEditorCommit();
-                                },
-                                actionBuilder: (context, query, close) {
-                                  final exactMatchExists = state.tasks.any(
-                                    (t) =>
-                                        t.title.toLowerCase() ==
-                                            query.toLowerCase() &&
-                                        t.projectId == _draft.projectId,
-                                  );
-                                  if (exactMatchExists && query.isNotEmpty)
-                                    return const SizedBox.shrink();
-
-                                  return SelectCreateAction(
-                                    label: query.isEmpty
-                                        ? 'Create new task'
-                                        : 'Create task "$query"',
-                                    onTap: () async {
-                                      if (_draft.projectId == null) return;
-                                      final newTask = await state.createTask(
-                                        _draft.projectId!,
-                                        query.isEmpty ? 'New task' : query,
-                                        '',
-                                      );
-                                      final updatedEntry = _draft.entry
-                                          .copyWith(taskId: newTask.id);
-                                      _updateDraft(updatedEntry);
-                                      _taskFieldController.handleEditorCommit();
-                                      close();
-                                    },
-                                  );
-                                },
-                                options: state.tasks
-                                    .where(
-                                      (t) => t.projectId == _draft.projectId,
-                                    )
-                                    .map((t) {
-                                      final project = state.projects.firstWhere(
-                                        (p) => p.id == t.projectId,
-                                      );
-                                      final initials =
-                                          BadgeUtils.getTaskInitials(
-                                            t.title,
-                                            project.name,
-                                          );
-                                      final colors = BadgeUtils.getBadgeColor(
-                                        t.id,
-                                      );
-                                      return SelectOption(
-                                        value: t.id,
-                                        label: t.title,
-                                        leading: WsInitialBadge(
-                                          initials: initials,
-                                          backgroundColor: colors.$1,
-                                          textColor: colors.$2,
-                                          size: WsInitialBadgeSize.small,
-                                        ),
-                                      );
-                                    })
-                                    .toList(),
-                              ),
-                            );
-                          },
-                        ),
                       ],
                     ),
                     content: SingleChildScrollView(
@@ -506,40 +278,6 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Timeline
-                          Row(
-                            children: [
-                              Expanded(
-                                child: DateTimeInlineField(
-                                  label: 'START',
-                                  value: _draft.startAt,
-                                  controller: _startTimeFieldController,
-                                  onChanged: (newStartAt) {
-                                    _updateDraft(
-                                      _draft.entry.copyWith(
-                                        startAt: newStartAt,
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                              SizedBox(width: theme.spacings.s16),
-                              Expanded(
-                                child: DateTimeInlineField(
-                                  label: 'END',
-                                  value: _draft.endAt ?? DateTime.now(),
-                                  isEditable: !isActive,
-                                  controller: _endTimeFieldController,
-                                  onChanged: (newEndAt) {
-                                    _updateDraft(
-                                      _draft.entry.copyWith(endAt: newEndAt),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: theme.spacings.s32),
-                          // Metrics Grid
                           Row(
                             children: [
                               Expanded(
@@ -614,6 +352,41 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                             ],
                           ),
                           SizedBox(height: theme.spacings.s32),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: DateTimeInlineField(
+                                  label: 'START',
+                                  value: _draft.startAt,
+                                  controller: _startTimeFieldController,
+                                  onChanged: (newStartAt) {
+                                    _updateDraft(
+                                      _draft.entry.copyWith(
+                                        startAt: newStartAt,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              SizedBox(width: theme.spacings.s16),
+                              Expanded(
+                                child: DateTimeInlineField(
+                                  label: 'END',
+                                  value: _draft.endAt ?? DateTime.now(),
+                                  isEditable: !isActive,
+                                  controller: _endTimeFieldController,
+                                  onChanged: (newEndAt) {
+                                    _updateDraft(
+                                      _draft.entry.copyWith(endAt: newEndAt),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          // Metrics Grid
+                          SizedBox(height: theme.spacings.s32),
 
                           // Comments
                           InlineField(
@@ -632,6 +405,254 @@ class _TimeEntryDrawerState extends State<TimeEntryDrawer> {
                           ),
                           SizedBox(height: theme.spacings.s32),
 
+                          Consumer<ProjectTaskState>(
+                            builder: (context, state, child) {
+                              final selectedTask = state.tasks
+                                  .where((t) => t.id == _draft.taskId)
+                                  .firstOrNull;
+
+                              Widget? leadingTaskWidget;
+                              if (selectedTask != null) {
+                                final project = state.projects.firstWhereOrNull(
+                                  (p) => p.id == selectedTask.projectId,
+                                );
+                                final initials = BadgeUtils.getTaskInitials(
+                                  selectedTask.title,
+                                  project?.name ?? '',
+                                );
+                                final colors = BadgeUtils.getBadgeColor(
+                                  selectedTask.id,
+                                );
+                                leadingTaskWidget = WsInitialBadge(
+                                  initials: initials,
+                                  backgroundColor: colors.$1,
+                                  textColor: colors.$2,
+                                  size: WsInitialBadgeSize.small,
+                                );
+                              }
+
+                              return InlineField(
+                                label: 'TASK',
+                                value: selectedTask?.title ?? '',
+                                placeholder: 'Select Task',
+                                leading: leadingTaskWidget,
+                                controller: _taskFieldController,
+                                editWidget: Select<String>(
+                                  autoOpen: true,
+                                  searchable: true,
+                                  tapRegionGroupId:
+                                      _taskFieldController.tapRegionGroupId,
+                                  onOpenChange: (isOpen) {
+                                    if (!isOpen) {
+                                      _taskFieldController.handleEditorClose();
+                                    }
+                                  },
+                                  value: _draft.taskId,
+                                  placeholder: 'Select Task',
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _draft = _draft.copyWith(
+                                        entry: _draft.entry.copyWith(
+                                          taskId: value,
+                                        ),
+                                        task: context
+                                            .read<EntityResolver>()
+                                            .getResolvedTask(value!)!
+                                            .task,
+                                      );
+                                    });
+                                    _taskFieldController.handleEditorCommit();
+                                  },
+                                  actionBuilder: (context, query, close) {
+                                    final exactMatchExists = state.tasks.any(
+                                      (t) =>
+                                          t.title.toLowerCase() ==
+                                              query.toLowerCase() &&
+                                          t.projectId == _draft.projectId,
+                                    );
+                                    if (exactMatchExists && query.isNotEmpty)
+                                      return const SizedBox.shrink();
+
+                                    return SelectCreateAction(
+                                      label: query.isEmpty
+                                          ? 'Create new task'
+                                          : 'Create task "$query"',
+                                      onTap: () async {
+                                        if (_draft.projectId == null) return;
+                                        final newTask = await state.createTask(
+                                          _draft.projectId!,
+                                          query.isEmpty ? 'New task' : query,
+                                          '',
+                                        );
+                                        setState(() {
+                                          setState(() {
+                                            _draft = _draft.copyWith(
+                                              entry: _draft.entry.copyWith(
+                                                taskId: newTask.id,
+                                              ),
+                                              task: newTask,
+                                            );
+                                          });
+                                        });
+                                        _taskFieldController
+                                            .handleEditorCommit();
+                                        close();
+                                      },
+                                    );
+                                  },
+                                  options: state.tasks
+                                      .where(
+                                        (t) => t.projectId == _draft.projectId,
+                                      )
+                                      .map((t) {
+                                        final project = state.projects
+                                            .firstWhere(
+                                              (p) => p.id == t.projectId,
+                                            );
+                                        final initials =
+                                            BadgeUtils.getTaskInitials(
+                                              t.title,
+                                              project.name,
+                                            );
+                                        final colors = BadgeUtils.getBadgeColor(
+                                          t.id,
+                                        );
+                                        return SelectOption(
+                                          value: t.id,
+                                          label: t.title,
+                                          leading: WsInitialBadge(
+                                            initials: initials,
+                                            backgroundColor: colors.$1,
+                                            textColor: colors.$2,
+                                            size: WsInitialBadgeSize.small,
+                                          ),
+                                        );
+                                      })
+                                      .toList(),
+                                ),
+                              );
+                            },
+                          ),
+                          SizedBox(height: theme.spacings.s16),
+                          // Task Select
+                          Consumer<ProjectTaskState>(
+                            builder: (context, state, child) {
+                              final selectedProject = state.projects
+                                  .where((p) => p.id == _draft.projectId)
+                                  .firstOrNull;
+
+                              Widget? leadingProjectWidget;
+                              if (selectedProject != null) {
+                                final initials = BadgeUtils.getProjectInitials(
+                                  selectedProject.name,
+                                );
+                                final colors = BadgeUtils.getBadgeColor(
+                                  selectedProject.id,
+                                );
+                                leadingProjectWidget = WsInitialBadge(
+                                  initials: initials,
+                                  backgroundColor: colors.$1,
+                                  textColor: colors.$2,
+                                  size: WsInitialBadgeSize.small,
+                                );
+                              }
+
+                              return InlineField(
+                                label: 'PROJECT',
+                                value: selectedProject?.name ?? '',
+                                placeholder: 'Select Project',
+                                leading: leadingProjectWidget,
+                                controller: _projectFieldController,
+                                editWidget: Select<String>(
+                                  autoOpen: true,
+                                  searchable: true,
+                                  tapRegionGroupId:
+                                      _projectFieldController.tapRegionGroupId,
+                                  onOpenChange: (isOpen) {
+                                    if (!isOpen) {
+                                      _projectFieldController
+                                          .handleEditorClose();
+                                    }
+                                  },
+                                  value: _draft.projectId,
+                                  placeholder: 'Select Project',
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _draft = _draft.copyWith(
+                                        entry: _draft.entry.copyWith(
+                                          projectId: value,
+                                          taskId: null,
+                                        ),
+                                        project: context
+                                            .read<EntityResolver>()
+                                            .getResolvedProject(value!)!
+                                            .project,
+                                      );
+                                    });
+
+                                    _projectFieldController
+                                        .handleEditorCommit();
+                                  },
+                                  actionBuilder: (context, query, close) {
+                                    final exactMatchExists = state.projects.any(
+                                      (p) =>
+                                          p.name.toLowerCase() ==
+                                          query.toLowerCase(),
+                                    );
+                                    if (exactMatchExists && query.isNotEmpty)
+                                      return const SizedBox.shrink();
+
+                                    return SelectCreateAction(
+                                      label: query.isEmpty
+                                          ? 'Create new project'
+                                          : 'Create project "$query"',
+                                      onTap: () async {
+                                        final newProject = await state
+                                            .createProject(
+                                              query.isEmpty
+                                                  ? 'New project'
+                                                  : query,
+                                              '',
+                                            );
+                                        setState(() {
+                                          _draft = _draft.copyWith(
+                                            entry: _draft.entry.copyWith(
+                                              projectId: newProject.id,
+                                              taskId: null,
+                                            ),
+                                            project: newProject,
+                                            task: null,
+                                          );
+                                        });
+                                        _projectFieldController
+                                            .handleEditorCommit();
+                                        close();
+                                      },
+                                    );
+                                  },
+                                  options: state.projects.map((p) {
+                                    final initials =
+                                        BadgeUtils.getProjectInitials(p.name);
+                                    final colors = BadgeUtils.getBadgeColor(
+                                      p.id,
+                                    );
+                                    return SelectOption(
+                                      value: p.id,
+                                      label: p.name,
+                                      leading: WsInitialBadge(
+                                        initials: initials,
+                                        backgroundColor: colors.$1,
+                                        textColor: colors.$2,
+                                        size: WsInitialBadgeSize.small,
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              );
+                            },
+                          ),
+
+                          SizedBox(height: theme.spacings.s32),
                           // Tags
                           Text(
                             'AI SUGGESTED TAGS',
